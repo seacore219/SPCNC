@@ -6,4 +6,6 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 results/
-notebooks/
+Gitlab/
+LTspice/
+data/
