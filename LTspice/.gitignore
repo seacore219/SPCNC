@@ -1,0 +1,6 @@
+lib
+ltspice
+*.log 
+*.net
+*.raw
+*.plt
