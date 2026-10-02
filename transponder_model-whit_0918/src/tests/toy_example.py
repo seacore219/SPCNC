@@ -51,6 +51,7 @@ parser.add_argument("--dt", help="delta t in ns, ignored if generator is used", 
 parser.add_argument('--ib1', nargs=2, action='append', type=float, help='set node [0] input bias to value [1]')
 parser.add_argument('--ib2', nargs=2, action='append', type=float, help='set node [0] output bias to value [1]')
 ## nargs = 2 means expects exactly 2 arguments
+parser.add_argument('--trace_node', type=int, default=4, help='matrix index of node for the gate-current trace plot (0=i1, 1=i2, 2=t1 ... 7=t6); default t3')
 args = parser.parse_args()
 
 print(args.ib1)
@@ -80,15 +81,16 @@ ref_period = 0.003 *1.0e-6 ## also not used??
 ##                       to: i1  i2  t1  t2  t3  t4  t5  t6    from:
 delay = 1.0e-9* np.array([[  0 , 0 , 5 , 0 , 0 , 0 , 9 , 0],   # i1
                           [  0 , 0 , 0 , 5 , 0 , 0 , 0 , 5],   # i2
-                          [  0 , 0 , 0 , 0 , 5 , 0 , 0 , 0],   # t1
-                          [  0 , 0 , 0 , 0 , 5 , 0 , 0 , 0],   # t2
-                          [  0 , 0 , 0 , 0 , 0 , 5 , 0 , 0],   # t3
-                          [  0 , 0 , 0 , 0 , 0 , 0 , 0 , 0],   # t4
-                          [  0 , 0 , 0 , 0 , 0 , 0 , 0 , 0],   # t5
-                          [  0 , 0 , 0 , 0 , 0 , 0 , 0 , 0],   # t6
+                          [  0 , 0 , 0 , 5 , 5 , 0 , 0 , 0],   # t1  -> t2, t3          (recurrent block 1-2-3)
+                          [  0 , 0 , 5 , 0 , 5 , 0 , 0 , 0],   # t2  -> t1, t3          (recurrent block 1-2-3)
+                          [  0 , 0 , 5 , 5 , 0 , 5 , 0 , 0],   # t3  -> t1, t2 ; t4     (t3->t4 is the ONLY feedforward link)
+                          [  0 , 0 , 0 , 0 , 0 , 0 , 5 , 5],   # t4  -> t5, t6          (recurrent block 4-5-6)
+                          [  0 , 0 , 0 , 0 , 0 , 5 , 0 , 5],   # t5  -> t4, t6          (recurrent block 4-5-6)
+                          [  0 , 0 , 0 , 0 , 0 , 5 , 5 , 0],   # t6  -> t4, t5          (recurrent block 4-5-6)
                           ])
-## so i1→t1 (5ns), i1→t5 (9ns), i2→t2 (5ns), i2→t6 (5ns), t1→t3 (5ns), t2→t3 (5ns), t3→t4 (5ns) are the only connections
-## t4-6 are dead ends(/outputs?) they don't send signals to anything
+## i1->t1 (5ns), i1->t5 (9ns), i2->t2 (5ns), i2->t6 (5ns) sensor inputs (unchanged)
+## t1<->t2<->t3<->t1 all-to-all recurrent, t3->t4 feedforward (no t4->t3), t4<->t5<->t6<->t4 all-to-all recurrent
+## a nonzero entry = connection with that delay in ns; set an entry to 0 to cut that connection
 connectivity = np.minimum(1,np.ceil(delay)) # converts binarizes delay function to either 0 or 1 (connnection or no connection)
 
 print(np.shape(delay)) ## prints (8,8) for the size of the delay matrix
@@ -310,6 +312,87 @@ def main() -> int:
   #print(solution.y)
   print(f"solution status {solution.status}")
   #plt.show()
+
+  # ------------------------------------------------------------------
+  # Post-processing: rebuild the gate current that RHS computes but throws away.
+  # Same formula as the input block of RHS: each upstream click at click_t arrives
+  # at click_t + delay and adds amp*OutputPulse. Uses the click times RHS recorded.
+  # ------------------------------------------------------------------
+  t   = solution.t
+  tns = t/1.0e-9
+  names = ['i1', 'i2'] + [f't{k}' for k in range(1, N_transponders-1)]
+  gate_parts = [dict() for _ in range(N_transponders)]   # gate_parts[i][j] = current into i from j
+  gate_current = np.zeros((N_transponders, len(t)))
+  for i_in in range(N_transponders):
+    for j_in in input_connections[i_in]:
+      amp  = transponder_bias2[j_in]*transponder_current_divider/np.sum(connectivity[j_in])
+      part = np.zeros(len(t))
+      for click_t in output_click_times[j_in]:
+        arrival = click_t + input_delays[i_in][j_in]
+        part += np.array([amp*OutputPulse(tk, t0=arrival) if tk >= click_t else 0.0 for tk in t])
+      gate_parts[i_in][j_in] = part
+      gate_current[i_in] += part
+
+  print("output (spike) click times [ns]:")
+  for n in range(N_transponders):
+    print(f"  {names[n]}: {np.round(np.array(output_click_times[n])/1.0e-9, 2)}")
+
+  # ---- 1) spike raster ----
+  fig, ax = plt.subplots(figsize=(8, 3.5))
+  for n in range(N_transponders):
+    ax.vlines(np.array(output_click_times[n])/1.0e-9, n-0.4, n+0.4, color='k', lw=2,
+              label='output click (spike)' if n == 0 else None)
+    if input_click_times[n]:
+      ax.plot(np.array(input_click_times[n])/1.0e-9, [n-0.45]*len(input_click_times[n]), 'v', color='tab:red', ms=4,
+              label='input (gate) click' if not any(input_click_times[:n]) else None)
+  for y in (1.5, 4.5):   # separate sensors | block 1-2-3 | block 4-5-6
+    ax.axhline(y, color='0.8', ls='--', lw=0.8)
+  ax.set_yticks(range(N_transponders), names)
+  ax.set_ylim(N_transponders-0.5, -0.5)
+  ax.set(xlim=(0, tns[-1]), xlabel='time [ns]', title='spike raster')
+  ax.legend(loc='upper right', fontsize=8, frameon=False)
+  plt.savefig(f"../results/{args.output}_raster.png", bbox_inches='tight', dpi=200)
+  plt.savefig(f"../results/{args.output}_raster.pdf", bbox_inches='tight')
+
+  # ---- 2) gate-current trace for one node: pulses summing up to threshold ----
+  n = args.trace_node
+  inw = solution.y[2*n]
+  fig, axs2 = plt.subplots(2, sharex=True, figsize=(8, 5))
+  for j_in, part in gate_parts[n].items():
+    axs2[0].plot(tns, part/1.0e-6, '--', label=f'from {names[j_in]}')
+  axs2[0].plot(tns, gate_current[n]/1.0e-6, 'k', lw=1.5, label='summed gate current')
+  axs2[0].axhline((Inw1_sw - transponder_bias1[n])/1.0e-6, color='r', ls=':', label='needed to switch (I1sw - Ib1)')
+  axs2[0].set(ylabel='gate current [uA]', title=f'{names[n]}: gate current')
+  axs2[0].legend(fontsize=8, frameon=False)
+  axs2[1].plot(tns, inw/1.0e-6, color='0.5', label='channel current i_nw')
+  axs2[1].plot(tns, (inw + gate_current[n])/1.0e-6, 'k', label='i_nw + gate')
+  axs2[1].axhline(Inw1_sw/1.0e-6, color='r', ls=':', label='I1sw (threshold)')
+  for k, tc in enumerate(input_click_times[n]):
+    axs2[1].axvline(tc/1.0e-9, color='r', alpha=0.4, label='input click' if k == 0 else None)
+  axs2[1].set(xlabel='time [ns]', ylabel='current [uA]')
+  axs2[1].legend(fontsize=8, frameon=False)
+  plt.savefig(f"../results/{args.output}_gate_trace_{names[n]}.png", bbox_inches='tight', dpi=200)
+  plt.savefig(f"../results/{args.output}_gate_trace_{names[n]}.pdf", bbox_inches='tight')
+
+  # ---- 3) gradient raster: white = no current, black = threshold (click), back to white after a click ----
+  # shade = gate current / largest gate current anywhere in the run (pitch black = maximum current)
+  gmax  = gate_current.max() if gate_current.max() > 0 else 1.0
+  shade = gate_current/gmax
+  for n in range(N_transponders):
+    for tc in input_click_times[n]:            # white while the nanowire is switched/recovering
+      shade[n][(t > tc) & (t <= tc + ref_period)] = 0
+    for tc in input_click_times[n] + output_click_times[n]:   # the click itself is pitch black
+      shade[n][np.abs(t - tc) <= 0.15e-9] = 1
+  fig, ax = plt.subplots(figsize=(8, 3.5))
+  im = ax.imshow(shade, aspect='auto', cmap='Greys', vmin=0, vmax=1, interpolation='nearest',
+                 extent=(tns[0], tns[-1], N_transponders-0.5, -0.5))
+  for y in (1.5, 4.5):
+    ax.axhline(y, color='0.8', ls='--', lw=0.8)
+  ax.set_yticks(range(N_transponders), names)
+  ax.set(xlabel='time [ns]', title='gradient raster: gate current (white = 0, black = max), clicks in black')
+  fig.colorbar(im, ax=ax, label=f'gate current / {gmax/1.0e-6:.2f} uA', pad=0.01)
+  plt.savefig(f"../results/{args.output}_gradient_raster.png", bbox_inches='tight', dpi=200)
+  plt.savefig(f"../results/{args.output}_gradient_raster.pdf", bbox_inches='tight')
 
   return 0
 
