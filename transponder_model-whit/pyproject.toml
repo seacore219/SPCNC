@@ -1,0 +1,20 @@
+[project]
+name = "transponder_model"
+version = "0.0.1"
+authors = [
+  { name="Whitney Armstrong", email="warmstrong@anl.gov" },
+]
+description = "A small example package"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+[project.urls]
+Homepage = "https://gitlab.com/spcnc/transponder_module"
+Issues = "https://gitlab.com/spcnc/transponder_module"
+

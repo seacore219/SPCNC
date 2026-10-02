@@ -1,0 +1,49 @@
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_PIPELINE_SOURCE == "webide"'
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_BRANCH == "acadia"'
+    - if: '$CI_COMMIT_TAG'
+
+# The Docker image that will be used to build your app
+document:
+  tags:
+    - mep-silicon
+  image: gabrielmn/tex-live-docker:full
+  script: 
+    - cd doc
+    - pdflatex main.tex
+    - pdflatex main.tex
+    #- bibtex main
+    - pdflatex main.tex
+    - pdflatex main.tex
+    - cp main.pdf ../transponder_model.pdf
+  after_script:
+    - cat main.log
+  artifacts:
+    paths:
+      - transponder_model.pdf
+
+tests:
+  tags:
+    - mep-silicon
+  image: quay.io/jupyter/datascience-notebook  
+  script: 
+    - python -V
+    - cd src
+    - pwd
+    - ls -lrth
+    - PYTHONPATH=$(pwd) python tests/current_loop.py
+    - PYTHONPATH=$(pwd) python tests/pulse_model.py
+    - PYTHONPATH=$(pwd) python tests/output_pulse.py
+    - cd ../transponder_python
+    - pwd
+    - ls -lrth
+    - PYTHONPATH=$(pwd) python tests/test_three_transponder.py
+  artifacts:
+    paths:
+      - results
+
+
