@@ -374,22 +374,26 @@ def main() -> int:
   plt.savefig(f"../results/{args.output}_gate_trace_{names[n]}.png", bbox_inches='tight', dpi=200)
   plt.savefig(f"../results/{args.output}_gate_trace_{names[n]}.pdf", bbox_inches='tight')
 
-  # ---- 3) gradient raster: white = no current, black = threshold (click), back to white after a click ----
+  # ---- 3) gradient raster: white = no current, black = max current, back to white after a click ----
   # shade = gate current / largest gate current anywhere in the run (pitch black = maximum current)
   gmax  = gate_current.max() if gate_current.max() > 0 else 1.0
   shade = gate_current/gmax
   for n in range(N_transponders):
     for tc in input_click_times[n]:            # white while the nanowire is switched/recovering
       shade[n][(t > tc) & (t <= tc + ref_period)] = 0
-    for tc in input_click_times[n] + output_click_times[n]:   # the click itself is pitch black
-      shade[n][np.abs(t - tc) <= 0.15e-9] = 1
   fig, ax = plt.subplots(figsize=(8, 3.5))
   im = ax.imshow(shade, aspect='auto', cmap='Greys', vmin=0, vmax=1, interpolation='nearest',
                  extent=(tns[0], tns[-1], N_transponders-0.5, -0.5))
+  for n in range(N_transponders):              # clicks as red lines, so they stand apart from the grey current
+    ax.vlines(np.array(output_click_times[n])/1.0e-9, n-0.5, n+0.5, color='red', lw=1.8,
+              label='output click (spike)' if n == 0 else None)
+    ax.vlines(np.array(input_click_times[n])/1.0e-9, n-0.5, n+0.5, color='red', lw=0.8, ls=':',
+              label='input (gate) click' if n == 2 else None)
+  ax.legend(loc='upper center', fontsize=8, frameon=False, ncol=2, bbox_to_anchor=(0.5, -0.15))
   for y in (1.5, 4.5):
     ax.axhline(y, color='0.8', ls='--', lw=0.8)
   ax.set_yticks(range(N_transponders), names)
-  ax.set(xlabel='time [ns]', title='gradient raster: gate current (white = 0, black = max), clicks in black')
+  ax.set(xlabel='time [ns]', title='gradient raster: gate current (white = 0, black = max)')
   fig.colorbar(im, ax=ax, label=f'gate current / {gmax/1.0e-6:.2f} uA', pad=0.01)
   plt.savefig(f"../results/{args.output}_gradient_raster.png", bbox_inches='tight', dpi=200)
   plt.savefig(f"../results/{args.output}_gradient_raster.pdf", bbox_inches='tight')
