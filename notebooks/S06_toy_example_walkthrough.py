@@ -50,10 +50,16 @@ plt.rcParams["figure.dpi"] = 110
 # %%
 dt_ns   = 35.0    # --dt      : delay between the two sensor clicks [ns]
 Ib1init = 12.0    # --Ib1init : input-nTron bias for every node [uA]
+                  #   schematic: I_b1, "bias3 in" -> U3 drain (LTspice uses ~150 uA)
 Ib2init = 19.0    # --Ib2init : output-nTron bias for every node [uA]
+                  #   schematic: I_b2, "bias4 in" -> U2 drain (LTspice uses ~160 uA)
 I1sw_uA = 14.0    # --I1sw    : input-nTron switching current (threshold) [uA]
+                  #   schematic: switching current of U3 (input nTron, Q1)
 I2sw_uA = 20.0    # --I2sw    : output-nTron switching current (threshold) [uA]
+                  #   schematic: switching current of U2 (output nTron, Q2)
 split   = 0.5     # --split   : fraction of a node's output current sent on to the nodes it feeds
+                  #   schematic: no single part; stands in for loop 4 (L2 / R1). The rest of U2's
+                  #   current is taken to go into the shunt R1 (R_s2)
 
 ib1_overrides = {2: 13.0, 4: 11.2}   # --ib1 N value  (node index -> uA)
 ib2_overrides = {}                   # --ib2 N value
@@ -64,19 +70,21 @@ T_END = 100e-9    # simulated time [s]
 # unit conversion, exactly as in the script
 Inw1_sw = I1sw_uA * 1.0e-6     # input ntron switching current [A]
 Inw2_sw = I2sw_uA * 1.0e-6     # output ntron switching current [A]
-Ib1 = Ib1init * 1.0e-6
-Ib2 = Ib2init * 1.0e-6
+Ib1 = Ib1init * 1.0e-6         # schematic: I_b1 (bias3)
+Ib2 = Ib2init * 1.0e-6         # schematic: I_b2 (bias4)
 dt  = dt_ns * 1.0e-9
 transponder_current_divider = split
 
 # Transponder circuit parameters (fixed in the script, not flags)
-Ls1 = 5 * 1.0e-9    # input ntron shunt inductance
-Rs1 = 2             # input ntron shunt resistance
-LT  = 150 * 1.0e-9  # transponder loop inductance
-RT0 = 3             # transponder loop resistance
-Lnw   = 10 * 1.0e-9 # ntron channel inductance
+Ls1 = 5 * 1.0e-9    # input ntron shunt inductance       schematic: L1 (5 nH), "L_s1" - loop 2
+Rs1 = 2             # input ntron shunt resistance       schematic: R3, "R_s1" - loop 2 (R3 = 3 ohm in LTspice)
+LT  = 150 * 1.0e-9  # transponder loop inductance        schematic: Lb1 (~148 nH), storage inductor "L_T" - loop 3
+RT0 = 3             # transponder loop resistance        schematic: R2, "R_T" - loop 3 (R2 = 4 ohm in LTspice)
+Lnw   = 10 * 1.0e-9 # ntron channel inductance         schematic: U3's "L_nw1" (inside the nTron; no separate part)
 Rnorm = 1000        # ntron channel normal-state resistance
+                    #   used for U3 switching ("R_nw1(t)") and for U2 switching, which is added onto R2 (see RT)
 ref_period = 0.003 * 1.0e-6   # 3 ns: how long a node stays "clicked" before it can click again
+                              #   (model bookkeeping, no schematic part)
 
 print(f"input threshold {Inw1_sw*1e6} uA, output threshold {Inw2_sw*1e6} uA, split {split}")
 
@@ -188,6 +196,20 @@ plt.show()
 # * **`i_nw`** — current through the *input* nTron channel. It sits at the input bias `Ib1`.
 # * **`i_loop`** — current in the transponder loop, which drives the *output* nTron.
 #
+# How the model's names map onto the single-transponder schematic (`single_transponder_simple.pdf`):
+#
+# | schematic | model | notes |
+# |---|---|---|
+# | pulser1 (U1), pulser2 (U4) | sensors i1, i2 (`sensor_pulses`) | |
+# | ① input loop: R28/L18, R29/L19 | gate current, `amp * OutputPulse` | pulse shape fixed by `OutputPulse`, not by R28/L18 |
+# | bias3 in, `I_b1` | `Ib1`, `transponder_bias1` | 150 µA in LTspice, 12 µA here |
+# | U3 input nTron (Q1): `L_nw1`, `R_nw1(t)` | `Lnw`, `Rnw` = `Rnorm * LinearPulse`, threshold `Inw1_sw` | current through it = `i_nw` |
+# | ② shunt: L1 (5 nH), R3 (3 Ω) = `L_s1`, `R_s1` | `Ls1` = 5 nH, `Rs1` = 2 Ω | R3 differs |
+# | ③ storage loop: Lb1 (~148 nH) = `L_T`, R2 (4 Ω) = `R_T` | `LT` = 150 nH, `RT0` = 3 Ω | R2 differs; current = `i_loop` (`I_loop`) |
+# | bias4 in, `I_b2` | `Ib2`, `transponder_bias2` | 160 µA in LTspice, 19 µA here |
+# | U2 output nTron (Q2): `L_nw2`, `R_nw2(t)` | threshold `Inw2_sw`; switching added to R2 as `RT = RT0 + Rnorm*LinearPulse` | no state variable, `L_nw2` not modelled |
+# | ④ output loop: L2 (5 nH), R1 (3 Ω) = `L_out`, `R_s2` | `split` (`transponder_current_divider`) | not modelled as parts; `split` is the share that reaches the next gates |
+#
 # Switching is a threshold rule layered on top of the circuit equations:
 #
 # 1. **Input click:** when `i_nw + gate current > I1sw`, the input channel goes normal
@@ -212,8 +234,8 @@ def single_node(pulse_peak, Ib1_n=12e-6, Ib2_n=19e-6, t_pulse=5e-9, t_end=40e-9)
   log = dict(t=[], gate=[], Rnw=[], RT=[])
   def rhs(t, x):
     inw, iloop = x
-    gate = pulse_amp * OutputPulse(t, t0=t_pulse) if t >= t_pulse - 2e-9 else 0.0
-    # output nTron: same rule as RHS
+    gate = pulse_amp * OutputPulse(t, t0=t_pulse) if t >= t_pulse - 2e-9 else 0.0   # loop 1 (pulser -> U3 gate)
+    # output nTron (U2): same rule as RHS
     if st["out_state"] == 1:
       RT = RT0 + Rnorm*LinearPulse(t, t0=st["t_out"], width=2.0e-9)
       if t - st["t_out"] > ref_period: st["out_state"] = 0
@@ -221,7 +243,7 @@ def single_node(pulse_peak, Ib1_n=12e-6, Ib2_n=19e-6, t_pulse=5e-9, t_end=40e-9)
       RT = RT0
       if iloop + Ib2_n > Inw2_sw and st["t_out"] is None:
         st["out_state"], st["t_out"] = 1, t
-    # input nTron: same rule as RHS
+    # input nTron (U3): same rule as RHS
     Rnw = 0.0
     if st["in_state"] == 0 and inw + gate > Inw1_sw and st["t_in"] is None:
       st["in_state"], st["t_in"] = 1, t
@@ -285,8 +307,8 @@ def reset_state():
   global transponder_Rnw_input, transponder_RT_loop, transponder_input_gate_current
   global transponder_source_current, transponder_initial_state
 
-  transponder_bias1 = Ib1*np.ones(N_transponders)
-  transponder_bias2 = Ib2*np.ones(N_transponders)
+  transponder_bias1 = Ib1*np.ones(N_transponders)   # I_b1 (bias3) of every node
+  transponder_bias2 = Ib2*np.ones(N_transponders)   # I_b2 (bias4) of every node
   for n, v in ib1_overrides.items(): transponder_bias1[int(n)] = v*1.0e-6
   for n, v in ib2_overrides.items(): transponder_bias2[int(n)] = v*1.0e-6
 
@@ -296,9 +318,10 @@ def reset_state():
   input_click_times  = [[] for _ in range(N_transponders)]
   output_click_times = [[] for _ in range(N_transponders)]
   sensor_pulses = [[1.0e-9], [1.0e-9 + dt]]   # i1 clicks at 1 ns, i2 at 1 ns + dt
+                                              #   schematic: pulser1 (U1) and pulser2 (U4)
 
-  transponder_Rnw_input = np.zeros(N_transponders)
-  transponder_RT_loop   = RT0*np.ones(N_transponders)
+  transponder_Rnw_input = np.zeros(N_transponders)   # U3 channel resistance "R_nw1(t)": 0 = superconducting
+  transponder_RT_loop   = RT0*np.ones(N_transponders)   # loop-3 resistance "R_T(t)": R2, plus U2 while it switches
   transponder_input_gate_current = np.zeros(N_transponders)
   transponder_source_current     = np.zeros(N_transponders)
 
@@ -329,11 +352,11 @@ print("initial state vector [uA]:", np.round(transponder_initial_state*1e6, 2))
 
 # %%
 def RHS(t, x):
-  nw_currents   = x[::2]
-  loop_currents = x[1::2]
+  nw_currents   = x[::2]    # current through U3's channel (drain -> source), loop 2
+  loop_currents = x[1::2]   # "I_loop": current around the storage loop 3 (Lb1, R2) into U2's gate
   eps = 1.0e-11
 
-  # 1. sensor clicks
+  # 1. sensor clicks  (schematic: pulser1 / pulser2)
   for n, clicks in enumerate(sensor_pulses):
     for i_click, sensor_click_t in enumerate(clicks):
       if abs(t - sensor_click_t) <= eps:
@@ -342,20 +365,22 @@ def RHS(t, x):
         output_click_times[n].append(t)
         sensor_pulses[n].pop(i_click)
 
-  # 2. output nTrons
+  # 2. output nTrons  (schematic: U2). U2 itself has no state variable here: when it switches, its
+  #    resistance is added onto R2 as RT, which dumps I_loop. L_nw2, L2 and R1 are not modelled.
   for i_out, output_state in enumerate(output_states):
     if output_states[i_out] == 1:
       tlast = output_click_times[i_out][len(output_click_times[i_out])-1]
-      transponder_RT_loop[i_out] = RT0 + Rnorm*LinearPulse(t, t0=tlast, width=2.0e-9)
+      transponder_RT_loop[i_out] = RT0 + Rnorm*LinearPulse(t, t0=tlast, width=2.0e-9)   # R2 + U2 switched
       if t - tlast > ref_period:
         output_states[i_out] = 0
     if output_states[i_out] == 0:
       transponder_RT_loop[i_out] = RT0
-      if loop_currents[i_out] + transponder_bias2[i_out] > Inw2_sw:
+      if loop_currents[i_out] + transponder_bias2[i_out] > Inw2_sw:   # I_loop (into U2 gate) + I_b2 > U2 threshold
         output_states[i_out] = 1
         output_click_times[i_out].append(t)
 
-  # 3. input nTrons
+  # 3. input nTrons  (schematic: U3). The gate current is loop 1: in the schematic it comes from the
+  #    pulsers through R28/L18 and R29/L19; here its shape is fixed by OutputPulse instead.
   for i_in, input_state in enumerate(input_states):
     if input_states[i_in] == 0:
       transponder_Rnw_input[i_in] = 0
@@ -364,13 +389,13 @@ def RHS(t, x):
       for j_in in input_connections[i_in]:
         n_split = np.sum(connectivity[j_in])
         b2  = transponder_bias2[j_in]
-        amp = b2*transponder_current_divider/n_split
+        amp = b2*transponder_current_divider/n_split   # sender's I_b2 x split, shared between its targets
         for click_t in output_click_times[j_in]:
           click_arrival = click_t + input_delays[i_in][j_in]
-          ntron_gate_current += amp*OutputPulse(t, t0=click_arrival)
+          ntron_gate_current += amp*OutputPulse(t, t0=click_arrival)   # loop 1: current into U3's gate
       transponder_source_current[i_in]     = nw_currents[i_in] + ntron_gate_current
       transponder_input_gate_current[i_in] = ntron_gate_current
-      if nw_currents[i_in] + ntron_gate_current > Inw1_sw:
+      if nw_currents[i_in] + ntron_gate_current > Inw1_sw:   # U3 channel + gate current > U3 threshold
         input_states[i_in] = 1
         input_click_times[i_in].append(t)
     if input_states[i_in] == 1:
@@ -378,16 +403,20 @@ def RHS(t, x):
       if t - latest_input_click > ref_period:
         input_states[i_in] = 0
       else:
-        transponder_Rnw_input[i_in] = Rnorm*LinearPulse(t, t0=latest_input_click, width=1.0e-9)
+        transponder_Rnw_input[i_in] = Rnorm*LinearPulse(t, t0=latest_input_click, width=1.0e-9)   # U3 "R_nw1(t)"
 
-  # 4. circuit equations
+  # 4. circuit equations: I_b1 splits between three parallel branches to ground --
+  #    U3 (Lnw, Rnw), shunt L1/R3 (Ls1, Rs1) and storage loop Lb1/R2 (LT, RT).
+  #    y1 = d(i_nw)/dt, y2 = d(I_loop)/dt. NOTE: these give the right steady-state split, but the
+  #    Lnw*Ls1 term in the denominator has the opposite sign from the circuit as drawn
+  #    (drawn: Lnw*Ls1 + Lnw*LT + Ls1*LT); time constants differ by ~5%. Worth checking with Whit.
   y = []
   for i_node, loop_cur in enumerate(loop_currents):
-    i1  = transponder_bias1[i_node]
+    i1  = transponder_bias1[i_node]   # I_b1 (bias3)
     inw = nw_currents[i_node]
     iloop = loop_cur
-    Rnw = transponder_Rnw_input[i_node]
-    RT  = transponder_RT_loop[i_node]
+    Rnw = transponder_Rnw_input[i_node]   # U3 "R_nw1(t)"
+    RT  = transponder_RT_loop[i_node]     # "R_T(t)" = R2 (+ U2 while switching)
     y1 = (-inw*Ls1*Rnw - i1*LT*Rs1 + iloop*LT*Rs1 + inw*LT*(Rnw + Rs1) + iloop*Ls1*RT)/(Lnw*(Ls1 - LT) - Ls1*LT)
     y2 = (-inw*Ls1*Rnw - i1*Lnw*Rs1 + iloop*Lnw*Rs1 + inw*Lnw*Rs1 + iloop*Lnw*RT + iloop*Ls1*RT)/(Lnw*(Ls1 - LT) - Ls1*LT)
     y.append(y1)
