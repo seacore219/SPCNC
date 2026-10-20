@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2989 1951" width="2989" height="1951" font-family="Inter, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5240 1786" width="5240" height="1786" font-family="Inter, Helvetica, Arial, sans-serif">
 <defs><marker id="ah1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#7b4fd6"/></marker><marker id="ah2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#d6457a"/></marker><marker id="ah3" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#138a96"/></marker><marker id="ah4" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#c9821a"/></marker></defs>
-<rect width="2989" height="1951" fill="#fff"/>
-<text x="40.0" y="44.0" font-size="26" fill="#1d2733" font-weight="600" text-anchor="start">Six transponders · the toy network drawn as six copies of the single-transponder schematic</text>
+<rect width="5240" height="1786" fill="#fff"/>
+<text x="40.0" y="44.0" font-size="26" fill="#1d2733" font-weight="600" text-anchor="start">Six transponders · laid out like the network graph, each drawn as a copy of the single-transponder schematic</text>
 <text x="40.0" y="70.0" font-size="13" fill="#6b7a89" font-weight="400" text-anchor="start">Every box is one copy of single_transponder_simple.pdf; the pulsers are replaced by the links. Wire colour = sending node. Blue monospace = variable names in toy_example.py / notebook N06.</text>
-<g transform="translate(371.0 208.0) scale(0.7)"><path d="M110 270 H372 V404 H450 V502 H110 Z" fill="#7b4fd6" fill-opacity=".07" stroke="#7b4fd6" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
+<g transform="translate(358.0 210.0) scale(0.6)"><path d="M110 270 H372 V404 H450 V502 H110 Z" fill="#7b4fd6" fill-opacity=".07" stroke="#7b4fd6" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M488 198 H622 V502 H488 Z" fill="#d6457a" fill-opacity=".07" stroke="#d6457a" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M658 198 H942 V402 H1122 V502 H658 Z" fill="#138a96" fill-opacity=".07" stroke="#138a96" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M1168 198 H1362 V502 H1168 Z" fill="#c9821a" fill-opacity=".07" stroke="#c9821a" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
@@ -141,7 +141,7 @@
 <text x="70.0" y="42.0" font-size="28" fill="#1d2733" font-weight="700" text-anchor="start">t1</text>
 <text x="70.0" y="64.0" font-size="13" fill="#6b7a89" font-weight="400" text-anchor="start">matrix row/col 2 · inputs: i1, t2, t3</text>
 <text x="70.0" y="84.0" font-size="11" fill="#2457c5" font-weight="400" text-anchor="start" font-family="ui-monospace, Menlo, Consolas, monospace">ref_period = 3 ns</text></g>
-<g transform="translate(371.0 705.0) scale(0.7)"><path d="M110 270 H372 V404 H450 V502 H110 Z" fill="#7b4fd6" fill-opacity=".07" stroke="#7b4fd6" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
+<g transform="translate(358.0 1094.0) scale(0.6)"><path d="M110 270 H372 V404 H450 V502 H110 Z" fill="#7b4fd6" fill-opacity=".07" stroke="#7b4fd6" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M488 198 H622 V502 H488 Z" fill="#d6457a" fill-opacity=".07" stroke="#d6457a" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M658 198 H942 V402 H1122 V502 H658 Z" fill="#138a96" fill-opacity=".07" stroke="#138a96" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M1168 198 H1362 V502 H1168 Z" fill="#c9821a" fill-opacity=".07" stroke="#c9821a" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
@@ -278,7 +278,7 @@
 <text x="70.0" y="42.0" font-size="28" fill="#1d2733" font-weight="700" text-anchor="start">t2</text>
 <text x="70.0" y="64.0" font-size="13" fill="#6b7a89" font-weight="400" text-anchor="start">matrix row/col 3 · inputs: i2, t1, t3</text>
 <text x="70.0" y="84.0" font-size="11" fill="#2457c5" font-weight="400" text-anchor="start" font-family="ui-monospace, Menlo, Consolas, monospace">ref_period = 3 ns</text></g>
-<g transform="translate(371.0 1202.0) scale(0.7)"><path d="M110 330 H372 V404 H450 V502 H110 Z" fill="#7b4fd6" fill-opacity=".07" stroke="#7b4fd6" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
+<g transform="translate(1606.0 652.0) scale(0.6)"><path d="M110 330 H372 V404 H450 V502 H110 Z" fill="#7b4fd6" fill-opacity=".07" stroke="#7b4fd6" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M488 198 H622 V502 H488 Z" fill="#d6457a" fill-opacity=".07" stroke="#d6457a" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M658 198 H942 V402 H1122 V502 H658 Z" fill="#138a96" fill-opacity=".07" stroke="#138a96" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M1168 198 H1362 V502 H1168 Z" fill="#c9821a" fill-opacity=".07" stroke="#c9821a" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
@@ -403,7 +403,7 @@
 <text x="70.0" y="42.0" font-size="28" fill="#1d2733" font-weight="700" text-anchor="start">t3</text>
 <text x="70.0" y="64.0" font-size="13" fill="#6b7a89" font-weight="400" text-anchor="start">matrix row/col 4 · inputs: t1, t2</text>
 <text x="70.0" y="84.0" font-size="11" fill="#2457c5" font-weight="400" text-anchor="start" font-family="ui-monospace, Menlo, Consolas, monospace">ref_period = 3 ns</text></g>
-<g transform="translate(1681.0 208.0) scale(0.7)"><path d="M110 270 H372 V404 H450 V502 H110 Z" fill="#7b4fd6" fill-opacity=".07" stroke="#7b4fd6" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
+<g transform="translate(2854.0 652.0) scale(0.6)"><path d="M110 270 H372 V404 H450 V502 H110 Z" fill="#7b4fd6" fill-opacity=".07" stroke="#7b4fd6" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M488 198 H622 V502 H488 Z" fill="#d6457a" fill-opacity=".07" stroke="#d6457a" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M658 198 H942 V402 H1122 V502 H658 Z" fill="#138a96" fill-opacity=".07" stroke="#138a96" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M1168 198 H1362 V502 H1168 Z" fill="#c9821a" fill-opacity=".07" stroke="#c9821a" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
@@ -540,7 +540,7 @@
 <text x="70.0" y="42.0" font-size="28" fill="#1d2733" font-weight="700" text-anchor="start">t4</text>
 <text x="70.0" y="64.0" font-size="13" fill="#6b7a89" font-weight="400" text-anchor="start">matrix row/col 5 · inputs: t3, t5, t6</text>
 <text x="70.0" y="84.0" font-size="11" fill="#2457c5" font-weight="400" text-anchor="start" font-family="ui-monospace, Menlo, Consolas, monospace">ref_period = 3 ns</text></g>
-<g transform="translate(1681.0 705.0) scale(0.7)"><path d="M110 270 H372 V404 H450 V502 H110 Z" fill="#7b4fd6" fill-opacity=".07" stroke="#7b4fd6" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
+<g transform="translate(4102.0 210.0) scale(0.6)"><path d="M110 270 H372 V404 H450 V502 H110 Z" fill="#7b4fd6" fill-opacity=".07" stroke="#7b4fd6" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M488 198 H622 V502 H488 Z" fill="#d6457a" fill-opacity=".07" stroke="#d6457a" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M658 198 H942 V402 H1122 V502 H658 Z" fill="#138a96" fill-opacity=".07" stroke="#138a96" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M1168 198 H1362 V502 H1168 Z" fill="#c9821a" fill-opacity=".07" stroke="#c9821a" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
@@ -677,7 +677,7 @@
 <text x="70.0" y="42.0" font-size="28" fill="#1d2733" font-weight="700" text-anchor="start">t5</text>
 <text x="70.0" y="64.0" font-size="13" fill="#6b7a89" font-weight="400" text-anchor="start">matrix row/col 6 · inputs: i1, t4, t6</text>
 <text x="70.0" y="84.0" font-size="11" fill="#2457c5" font-weight="400" text-anchor="start" font-family="ui-monospace, Menlo, Consolas, monospace">ref_period = 3 ns</text></g>
-<g transform="translate(1681.0 1202.0) scale(0.7)"><path d="M110 270 H372 V404 H450 V502 H110 Z" fill="#7b4fd6" fill-opacity=".07" stroke="#7b4fd6" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
+<g transform="translate(4102.0 1094.0) scale(0.6)"><path d="M110 270 H372 V404 H450 V502 H110 Z" fill="#7b4fd6" fill-opacity=".07" stroke="#7b4fd6" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M488 198 H622 V502 H488 Z" fill="#d6457a" fill-opacity=".07" stroke="#d6457a" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M658 198 H942 V402 H1122 V502 H658 Z" fill="#138a96" fill-opacity=".07" stroke="#138a96" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
 <path d="M1168 198 H1362 V502 H1168 Z" fill="#c9821a" fill-opacity=".07" stroke="#c9821a" stroke-width="3" stroke-dasharray="9 6" stroke-linejoin="round"/>
@@ -822,99 +822,99 @@
 <text x="130.0" y="472.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="middle">sensor click at 1 ns</text>
 <text x="130.0" y="490.0" font-size="11" fill="#2457c5" font-weight="400" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">n = 2, same Ib2·split rule</text>
 <path d="M130.0 322.0V292.0" fill="none" stroke="#1565c0" stroke-width="2.6" stroke="#1565c0"/>
-<circle cx="130.0" cy="839.0" r="20" fill="#fff" stroke="#3a4a5a" stroke-width="2.6"/>
-<path d="M130.0 851.0V828.0 M124.0 836.0l6 -8 6 8" fill="none" stroke="#3a4a5a" stroke-width="2.4" />
-<path d="M130.0 859.0V899.0" fill="none" stroke="#3a4a5a" stroke-width="2.6" />
-<path d="M130.0 899.0V913.0" fill="none" stroke="#3a4a5a" stroke-width="2.6" /><path d="M112.0 913.0h36M118.0 920.0h24M124.0 927.0h12" fill="none" stroke="#3a4a5a" stroke-width="2.6" />
-<text x="130.0" y="951.0" font-size="15" fill="#2e7d32" font-weight="700" text-anchor="middle">i2 · pulser2 (U4)</text>
-<text x="130.0" y="969.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="middle">click at 1 ns + dt</text>
-<text x="130.0" y="987.0" font-size="11" fill="#2457c5" font-weight="400" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">n = 2, same Ib2·split rule</text>
-<path d="M130.0 819.0V789.0" fill="none" stroke="#2e7d32" stroke-width="2.6" stroke="#2e7d32"/>
+<circle cx="130.0" cy="1226.0" r="20" fill="#fff" stroke="#3a4a5a" stroke-width="2.6"/>
+<path d="M130.0 1238.0V1215.0 M124.0 1223.0l6 -8 6 8" fill="none" stroke="#3a4a5a" stroke-width="2.4" />
+<path d="M130.0 1246.0V1286.0" fill="none" stroke="#3a4a5a" stroke-width="2.6" />
+<path d="M130.0 1286.0V1300.0" fill="none" stroke="#3a4a5a" stroke-width="2.6" /><path d="M112.0 1300.0h36M118.0 1307.0h24M124.0 1314.0h12" fill="none" stroke="#3a4a5a" stroke-width="2.6" />
+<text x="130.0" y="1338.0" font-size="15" fill="#2e7d32" font-weight="700" text-anchor="middle">i2 · pulser2 (U4)</text>
+<text x="130.0" y="1356.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="middle">click at 1 ns + dt</text>
+<text x="130.0" y="1374.0" font-size="11" fill="#2457c5" font-weight="400" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">n = 2, same Ib2·split rule</text>
+<path d="M130.0 1206.0V1176.0" fill="none" stroke="#2e7d32" stroke-width="2.6" stroke="#2e7d32"/>
 <polyline fill="none" stroke="#1565c0" stroke-width="2.4" stroke-linejoin="round" points="130.0,292.0 250.0,292.0"/>
-<polyline fill="none" stroke="#1565c0" stroke-width="2.4" stroke-linejoin="round" points="250.0,152.0 250.0,691.0"/>
-<circle cx="250.0" cy="292.0" r="4.2" fill="#1565c0"/>
-<polyline fill="none" stroke="#1565c0" stroke-width="2.4" stroke-linejoin="round" points="250.0,152.0 398.0,152.0 398.0,418.0 420.0,418.0"/>
-<path d="M420.0 418.0 l-10 -5 v10z" fill="#1565c0"/>
-<polyline fill="none" stroke="#1565c0" stroke-width="2.4" stroke-linejoin="round" points="250.0,691.0 1708.0,691.0 1708.0,915.0 1730.0,915.0"/>
-<path d="M1730.0 915.0 l-10 -5 v10z" fill="#1565c0"/>
-<polyline fill="none" stroke="#2e7d32" stroke-width="2.4" stroke-linejoin="round" points="130.0,789.0 266.0,789.0"/>
-<polyline fill="none" stroke="#2e7d32" stroke-width="2.4" stroke-linejoin="round" points="266.0,649.0 266.0,1174.0"/>
-<circle cx="266.0" cy="789.0" r="4.2" fill="#2e7d32"/>
-<polyline fill="none" stroke="#2e7d32" stroke-width="2.4" stroke-linejoin="round" points="266.0,649.0 398.0,649.0 398.0,915.0 420.0,915.0"/>
-<path d="M420.0 915.0 l-10 -5 v10z" fill="#2e7d32"/>
-<polyline fill="none" stroke="#2e7d32" stroke-width="2.4" stroke-linejoin="round" points="266.0,1174.0 1708.0,1174.0 1708.0,1412.0 1730.0,1412.0"/>
-<path d="M1730.0 1412.0 l-10 -5 v10z" fill="#2e7d32"/>
-<polyline fill="none" stroke="#c62828" stroke-width="2.4" stroke-linejoin="round" points="1519.0,334.0 1581.0,334.0"/>
-<polyline fill="none" stroke="#c62828" stroke-width="2.4" stroke-linejoin="round" points="1581.0,334.0 1581.0,1132.0"/>
-<polyline fill="none" stroke="#c62828" stroke-width="2.4" stroke-linejoin="round" points="1581.0,635.0 384.0,635.0 384.0,957.0 420.0,957.0"/>
-<path d="M420.0 957.0 l-10 -5 v10z" fill="#c62828"/>
-<circle cx="1581.0" cy="635.0" r="4.2" fill="#c62828"/>
-<polyline fill="none" stroke="#c62828" stroke-width="2.4" stroke-linejoin="round" points="1581.0,1132.0 398.0,1132.0 398.0,1454.0 420.0,1454.0"/>
-<path d="M420.0 1454.0 l-10 -5 v10z" fill="#c62828"/>
-<polyline fill="none" stroke="#ef6c00" stroke-width="2.4" stroke-linejoin="round" points="1519.0,831.0 1597.0,831.0"/>
-<polyline fill="none" stroke="#ef6c00" stroke-width="2.4" stroke-linejoin="round" points="1597.0,138.0 1597.0,1118.0"/>
-<circle cx="1597.0" cy="831.0" r="4.2" fill="#ef6c00"/>
-<polyline fill="none" stroke="#ef6c00" stroke-width="2.4" stroke-linejoin="round" points="1597.0,138.0 384.0,138.0 384.0,460.0 420.0,460.0"/>
-<path d="M420.0 460.0 l-10 -5 v10z" fill="#ef6c00"/>
-<polyline fill="none" stroke="#ef6c00" stroke-width="2.4" stroke-linejoin="round" points="1597.0,1118.0 384.0,1118.0 384.0,1496.0 420.0,1496.0"/>
-<path d="M420.0 1496.0 l-10 -5 v10z" fill="#ef6c00"/>
-<polyline fill="none" stroke="#6a1b9a" stroke-width="2.4" stroke-linejoin="round" points="1519.0,1328.0 1613.0,1328.0"/>
-<polyline fill="none" stroke="#6a1b9a" stroke-width="2.4" stroke-linejoin="round" points="1613.0,124.0 1613.0,1328.0"/>
-<polyline fill="none" stroke="#6a1b9a" stroke-width="2.4" stroke-linejoin="round" points="1613.0,124.0 370.0,124.0 370.0,502.0 420.0,502.0"/>
-<path d="M420.0 502.0 l-10 -5 v10z" fill="#6a1b9a"/>
-<polyline fill="none" stroke="#6a1b9a" stroke-width="2.4" stroke-linejoin="round" points="1613.0,621.0 370.0,621.0 370.0,999.0 420.0,999.0"/>
-<path d="M420.0 999.0 l-10 -5 v10z" fill="#6a1b9a"/>
-<circle cx="1613.0" cy="621.0" r="4.2" fill="#6a1b9a"/>
-<polyline fill="none" stroke="#6a1b9a" stroke-width="2.4" stroke-linejoin="round" points="1613.0,194.0 1708.0,194.0 1708.0,418.0 1730.0,418.0"/>
-<path d="M1730.0 418.0 l-10 -5 v10z" fill="#6a1b9a"/>
-<circle cx="1613.0" cy="194.0" r="4.2" fill="#6a1b9a"/>
-<polyline fill="none" stroke="#00838f" stroke-width="2.4" stroke-linejoin="round" points="2829.0,334.0 2891.0,334.0"/>
-<polyline fill="none" stroke="#00838f" stroke-width="2.4" stroke-linejoin="round" points="2891.0,334.0 2891.0,1160.0"/>
-<polyline fill="none" stroke="#00838f" stroke-width="2.4" stroke-linejoin="round" points="2891.0,677.0 1694.0,677.0 1694.0,957.0 1730.0,957.0"/>
-<path d="M1730.0 957.0 l-10 -5 v10z" fill="#00838f"/>
-<circle cx="2891.0" cy="677.0" r="4.2" fill="#00838f"/>
-<polyline fill="none" stroke="#00838f" stroke-width="2.4" stroke-linejoin="round" points="2891.0,1160.0 1694.0,1160.0 1694.0,1454.0 1730.0,1454.0"/>
-<path d="M1730.0 1454.0 l-10 -5 v10z" fill="#00838f"/>
-<polyline fill="none" stroke="#ad1457" stroke-width="2.4" stroke-linejoin="round" points="2829.0,831.0 2907.0,831.0"/>
-<polyline fill="none" stroke="#ad1457" stroke-width="2.4" stroke-linejoin="round" points="2907.0,180.0 2907.0,1146.0"/>
-<circle cx="2907.0" cy="831.0" r="4.2" fill="#ad1457"/>
-<polyline fill="none" stroke="#ad1457" stroke-width="2.4" stroke-linejoin="round" points="2907.0,180.0 1694.0,180.0 1694.0,460.0 1730.0,460.0"/>
-<path d="M1730.0 460.0 l-10 -5 v10z" fill="#ad1457"/>
-<polyline fill="none" stroke="#ad1457" stroke-width="2.4" stroke-linejoin="round" points="2907.0,1146.0 1680.0,1146.0 1680.0,1496.0 1730.0,1496.0"/>
-<path d="M1730.0 1496.0 l-10 -5 v10z" fill="#ad1457"/>
-<polyline fill="none" stroke="#5d4037" stroke-width="2.4" stroke-linejoin="round" points="2829.0,1328.0 2923.0,1328.0"/>
-<polyline fill="none" stroke="#5d4037" stroke-width="2.4" stroke-linejoin="round" points="2923.0,166.0 2923.0,1328.0"/>
-<polyline fill="none" stroke="#5d4037" stroke-width="2.4" stroke-linejoin="round" points="2923.0,166.0 1680.0,166.0 1680.0,502.0 1730.0,502.0"/>
-<path d="M1730.0 502.0 l-10 -5 v10z" fill="#5d4037"/>
-<polyline fill="none" stroke="#5d4037" stroke-width="2.4" stroke-linejoin="round" points="2923.0,663.0 1680.0,663.0 1680.0,999.0 1730.0,999.0"/>
-<path d="M1730.0 999.0 l-10 -5 v10z" fill="#5d4037"/>
-<circle cx="2923.0" cy="663.0" r="4.2" fill="#5d4037"/>
-<line x1="40" y1="1631.0" x2="2949" y2="1631.0" stroke="#d5dbe1"/>
-<text x="40.0" y="1661.0" font-size="18" fill="#1d2733" font-weight="600" text-anchor="start">Legend</text>
-<text x="40.0" y="1689.0" font-size="14" fill="#1d2733" font-weight="600" text-anchor="start">Loops (same as the single-transponder drawing):</text>
-<text x="40.0" y="1713.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">① input loop: gate current into U3, fed by the links (R_in/L_in)   ② shunt loop: catches Ib1 while U3 is resistive</text>
-<text x="40.0" y="1735.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">③ storage loop: I_loop circulates through Lb1 and R2 and drives the gate of U2   ④ output loop: U2 current pushed into L2/R1 and out on the links</text>
-<text x="40.0" y="1757.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start"></text>
-<text x="40.0" y="1779.0" font-size="14" fill="#1d2733" font-weight="600" text-anchor="start">Things to know:</text>
-<text x="40.0" y="1803.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">· split enters at one place only: each output junction. Each link gets Ib2·split/n of nominal amplitude (peak ×0.61 after OutputPulse); the rest goes to the R1 shunt.</text>
-<text x="40.0" y="1825.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">· The LTspice drawing has 2 inputs (R28/L18, R29/L19). The toy network needs 3 inputs for t1, t2, t4, t5, t6, so the input branch is repeated per link.</text>
-<text x="40.0" y="1847.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">· LTspice values: Ib1 ≈ 150 µA, Ib2 ≈ 160 µA, R2 = 4 Ω, R3 = 3 Ω.  Toy values: Ib1 = 12–13 µA, Ib2 = 19 µA, RT0 = 3 Ω, Rs1 = 2 Ω (notebook defaults).</text>
-<text x="40.0" y="1869.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">· Sensors are drawn as the ideal pulsers of the original drawing, but the toy gives them the same output rule as a transponder (Ib2, split).</text>
-<text x="40.0" y="1891.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">· L2, R1, L_nw2 and the R_in/L_in values are not variables in the toy; the delay boxes are the delay matrix entries; all ground rails are the same 0 V node.</text>
-<rect x="2069" y="1653.0" width="22" height="8" fill="#1565c0"/>
-<text x="2099.0" y="1662.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from i1</text>
-<rect x="2179" y="1653.0" width="22" height="8" fill="#2e7d32"/>
-<text x="2209.0" y="1662.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from i2</text>
-<rect x="2289" y="1653.0" width="22" height="8" fill="#c62828"/>
-<text x="2319.0" y="1662.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from t1</text>
-<rect x="2399" y="1653.0" width="22" height="8" fill="#ef6c00"/>
-<text x="2429.0" y="1662.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from t2</text>
-<rect x="2509" y="1653.0" width="22" height="8" fill="#6a1b9a"/>
-<text x="2539.0" y="1662.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from t3</text>
-<rect x="2619" y="1653.0" width="22" height="8" fill="#00838f"/>
-<text x="2649.0" y="1662.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from t4</text>
-<rect x="2729" y="1653.0" width="22" height="8" fill="#ad1457"/>
-<text x="2759.0" y="1662.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from t5</text>
-<rect x="2839" y="1653.0" width="22" height="8" fill="#5d4037"/>
-<text x="2869.0" y="1662.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from t6</text>
+<polyline fill="none" stroke="#1565c0" stroke-width="2.4" stroke-linejoin="round" points="250.0,152.0 250.0,292.0"/>
+<polyline fill="none" stroke="#1565c0" stroke-width="2.4" stroke-linejoin="round" points="250.0,152.0 378.0,152.0 378.0,390.0 400.0,390.0"/>
+<path d="M400.0 390.0 l-10 -5 v10z" fill="#1565c0"/>
+<polyline fill="none" stroke="#1565c0" stroke-width="2.4" stroke-linejoin="round" points="250.0,194.0 4122.0,194.0 4122.0,390.0 4144.0,390.0"/>
+<path d="M4144.0 390.0 l-10 -5 v10z" fill="#1565c0"/>
+<circle cx="250.0" cy="194.0" r="4.2" fill="#1565c0"/>
+<polyline fill="none" stroke="#2e7d32" stroke-width="2.4" stroke-linejoin="round" points="130.0,1176.0 266.0,1176.0"/>
+<polyline fill="none" stroke="#2e7d32" stroke-width="2.4" stroke-linejoin="round" points="266.0,1036.0 266.0,1176.0"/>
+<polyline fill="none" stroke="#2e7d32" stroke-width="2.4" stroke-linejoin="round" points="266.0,1036.0 378.0,1036.0 378.0,1274.0 400.0,1274.0"/>
+<path d="M400.0 1274.0 l-10 -5 v10z" fill="#2e7d32"/>
+<polyline fill="none" stroke="#2e7d32" stroke-width="2.4" stroke-linejoin="round" points="266.0,1078.0 4122.0,1078.0 4122.0,1274.0 4144.0,1274.0"/>
+<path d="M4144.0 1274.0 l-10 -5 v10z" fill="#2e7d32"/>
+<circle cx="266.0" cy="1078.0" r="4.2" fill="#2e7d32"/>
+<polyline fill="none" stroke="#c62828" stroke-width="2.4" stroke-linejoin="round" points="1342.0,318.0 1398.0,318.0"/>
+<polyline fill="none" stroke="#c62828" stroke-width="2.4" stroke-linejoin="round" points="1398.0,318.0 1398.0,1022.0"/>
+<polyline fill="none" stroke="#c62828" stroke-width="2.4" stroke-linejoin="round" points="1398.0,1022.0 364.0,1022.0 364.0,1310.0 400.0,1310.0"/>
+<path d="M400.0 1310.0 l-10 -5 v10z" fill="#c62828"/>
+<polyline fill="none" stroke="#c62828" stroke-width="2.4" stroke-linejoin="round" points="1398.0,580.0 1626.0,580.0 1626.0,868.0 1648.0,868.0"/>
+<path d="M1648.0 868.0 l-10 -5 v10z" fill="#c62828"/>
+<circle cx="1398.0" cy="580.0" r="4.2" fill="#c62828"/>
+<polyline fill="none" stroke="#ef6c00" stroke-width="2.4" stroke-linejoin="round" points="1342.0,1202.0 1430.0,1202.0"/>
+<polyline fill="none" stroke="#ef6c00" stroke-width="2.4" stroke-linejoin="round" points="1430.0,138.0 1430.0,1202.0"/>
+<polyline fill="none" stroke="#ef6c00" stroke-width="2.4" stroke-linejoin="round" points="1430.0,138.0 364.0,138.0 364.0,426.0 400.0,426.0"/>
+<path d="M400.0 426.0 l-10 -5 v10z" fill="#ef6c00"/>
+<polyline fill="none" stroke="#ef6c00" stroke-width="2.4" stroke-linejoin="round" points="1430.0,566.0 1612.0,566.0 1612.0,904.0 1648.0,904.0"/>
+<path d="M1648.0 904.0 l-10 -5 v10z" fill="#ef6c00"/>
+<circle cx="1430.0" cy="566.0" r="4.2" fill="#ef6c00"/>
+<polyline fill="none" stroke="#6a1b9a" stroke-width="2.4" stroke-linejoin="round" points="2590.0,760.0 2662.0,760.0"/>
+<polyline fill="none" stroke="#6a1b9a" stroke-width="2.4" stroke-linejoin="round" points="2662.0,124.0 2662.0,1008.0"/>
+<circle cx="2662.0" cy="760.0" r="4.2" fill="#6a1b9a"/>
+<polyline fill="none" stroke="#6a1b9a" stroke-width="2.4" stroke-linejoin="round" points="2662.0,124.0 350.0,124.0 350.0,462.0 400.0,462.0"/>
+<path d="M400.0 462.0 l-10 -5 v10z" fill="#6a1b9a"/>
+<polyline fill="none" stroke="#6a1b9a" stroke-width="2.4" stroke-linejoin="round" points="2662.0,1008.0 350.0,1008.0 350.0,1346.0 400.0,1346.0"/>
+<path d="M400.0 1346.0 l-10 -5 v10z" fill="#6a1b9a"/>
+<polyline fill="none" stroke="#6a1b9a" stroke-width="2.4" stroke-linejoin="round" points="2662.0,622.0 2874.0,622.0 2874.0,832.0 2896.0,832.0"/>
+<path d="M2896.0 832.0 l-10 -5 v10z" fill="#6a1b9a"/>
+<circle cx="2662.0" cy="622.0" r="4.2" fill="#6a1b9a"/>
+<polyline fill="none" stroke="#00838f" stroke-width="2.4" stroke-linejoin="round" points="3838.0,760.0 3910.0,760.0"/>
+<polyline fill="none" stroke="#00838f" stroke-width="2.4" stroke-linejoin="round" points="3910.0,180.0 3910.0,1064.0"/>
+<circle cx="3910.0" cy="760.0" r="4.2" fill="#00838f"/>
+<polyline fill="none" stroke="#00838f" stroke-width="2.4" stroke-linejoin="round" points="3910.0,180.0 4108.0,180.0 4108.0,426.0 4144.0,426.0"/>
+<path d="M4144.0 426.0 l-10 -5 v10z" fill="#00838f"/>
+<polyline fill="none" stroke="#00838f" stroke-width="2.4" stroke-linejoin="round" points="3910.0,1064.0 4108.0,1064.0 4108.0,1310.0 4144.0,1310.0"/>
+<path d="M4144.0 1310.0 l-10 -5 v10z" fill="#00838f"/>
+<polyline fill="none" stroke="#ad1457" stroke-width="2.4" stroke-linejoin="round" points="5086.0,318.0 5142.0,318.0"/>
+<polyline fill="none" stroke="#ad1457" stroke-width="2.4" stroke-linejoin="round" points="5142.0,318.0 5142.0,1050.0"/>
+<polyline fill="none" stroke="#ad1457" stroke-width="2.4" stroke-linejoin="round" points="5142.0,608.0 2860.0,608.0 2860.0,868.0 2896.0,868.0"/>
+<path d="M2896.0 868.0 l-10 -5 v10z" fill="#ad1457"/>
+<circle cx="5142.0" cy="608.0" r="4.2" fill="#ad1457"/>
+<polyline fill="none" stroke="#ad1457" stroke-width="2.4" stroke-linejoin="round" points="5142.0,1050.0 4094.0,1050.0 4094.0,1346.0 4144.0,1346.0"/>
+<path d="M4144.0 1346.0 l-10 -5 v10z" fill="#ad1457"/>
+<polyline fill="none" stroke="#5d4037" stroke-width="2.4" stroke-linejoin="round" points="5086.0,1202.0 5174.0,1202.0"/>
+<polyline fill="none" stroke="#5d4037" stroke-width="2.4" stroke-linejoin="round" points="5174.0,166.0 5174.0,1202.0"/>
+<polyline fill="none" stroke="#5d4037" stroke-width="2.4" stroke-linejoin="round" points="5174.0,594.0 2846.0,594.0 2846.0,904.0 2896.0,904.0"/>
+<path d="M2896.0 904.0 l-10 -5 v10z" fill="#5d4037"/>
+<circle cx="5174.0" cy="594.0" r="4.2" fill="#5d4037"/>
+<polyline fill="none" stroke="#5d4037" stroke-width="2.4" stroke-linejoin="round" points="5174.0,166.0 4094.0,166.0 4094.0,462.0 4144.0,462.0"/>
+<path d="M4144.0 462.0 l-10 -5 v10z" fill="#5d4037"/>
+<line x1="40" y1="1466.0" x2="5200" y2="1466.0" stroke="#d5dbe1"/>
+<text x="40.0" y="1496.0" font-size="18" fill="#1d2733" font-weight="600" text-anchor="start">Legend</text>
+<text x="40.0" y="1524.0" font-size="14" fill="#1d2733" font-weight="600" text-anchor="start">Loops (same as the single-transponder drawing):</text>
+<text x="40.0" y="1548.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">① input loop: gate current into U3, fed by the links (R_in/L_in)   ② shunt loop: catches Ib1 while U3 is resistive</text>
+<text x="40.0" y="1570.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">③ storage loop: I_loop circulates through Lb1 and R2 and drives the gate of U2   ④ output loop: U2 current pushed into L2/R1 and out on the links</text>
+<text x="40.0" y="1592.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start"></text>
+<text x="40.0" y="1614.0" font-size="14" fill="#1d2733" font-weight="600" text-anchor="start">Things to know:</text>
+<text x="40.0" y="1638.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">· split enters at one place only: each output junction. Each link gets Ib2·split/n of nominal amplitude (peak ×0.61 after OutputPulse); the rest goes to the R1 shunt.</text>
+<text x="40.0" y="1660.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">· The LTspice drawing has 2 inputs (R28/L18, R29/L19). The toy network needs 3 inputs for t1, t2, t4, t5, t6, so the input branch is repeated per link.</text>
+<text x="40.0" y="1682.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">· LTspice values: Ib1 ≈ 150 µA, Ib2 ≈ 160 µA, R2 = 4 Ω, R3 = 3 Ω.  Toy values: Ib1 = 12–13 µA, Ib2 = 19 µA, RT0 = 3 Ω, Rs1 = 2 Ω (notebook defaults).</text>
+<text x="40.0" y="1704.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">· Sensors are drawn as the ideal pulsers of the original drawing, but the toy gives them the same output rule as a transponder (Ib2, split).</text>
+<text x="40.0" y="1726.0" font-size="13" fill="#3a4a5a" font-weight="400" text-anchor="start">· L2, R1, L_nw2 and the R_in/L_in values are not variables in the toy; the delay boxes are the delay matrix entries; all ground rails are the same 0 V node.</text>
+<rect x="4320" y="1488.0" width="22" height="8" fill="#1565c0"/>
+<text x="4350.0" y="1497.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from i1</text>
+<rect x="4430" y="1488.0" width="22" height="8" fill="#2e7d32"/>
+<text x="4460.0" y="1497.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from i2</text>
+<rect x="4540" y="1488.0" width="22" height="8" fill="#c62828"/>
+<text x="4570.0" y="1497.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from t1</text>
+<rect x="4650" y="1488.0" width="22" height="8" fill="#ef6c00"/>
+<text x="4680.0" y="1497.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from t2</text>
+<rect x="4760" y="1488.0" width="22" height="8" fill="#6a1b9a"/>
+<text x="4790.0" y="1497.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from t3</text>
+<rect x="4870" y="1488.0" width="22" height="8" fill="#00838f"/>
+<text x="4900.0" y="1497.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from t4</text>
+<rect x="4980" y="1488.0" width="22" height="8" fill="#ad1457"/>
+<text x="5010.0" y="1497.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from t5</text>
+<rect x="5090" y="1488.0" width="22" height="8" fill="#5d4037"/>
+<text x="5120.0" y="1497.0" font-size="12" fill="#6b7a89" font-weight="400" text-anchor="start">from t6</text>
 </svg>

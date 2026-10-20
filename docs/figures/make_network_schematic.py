@@ -257,15 +257,22 @@ def module(n, srcs):
 
 
 # ----------------------------------------------------------------------------- layout
-S = 0.7
+# Positions mirror the network graph in the notebook (section 3):
+#   t1 (top) / t2 (bottom)  ->  t3 (middle)  ==feedforward==>  t4 (middle)  ->  t5 (top) / t6 (bottom)
+S = 0.6
 N_LOCAL_W = 1700
 links = [(s, r, int(delay_ns[s][r])) for s in range(8) for r in range(8) if delay_ns[s][r] > 0]
 fanin = {r: sorted(s for s, rr, _ in links if rr == r) for r in range(2, 8)}
-col_of = lambda n: 0 if n <= 4 else 1
-row_of = lambda n: (n - 2) % 3
+COL = {2: 0, 3: 0, 4: 1, 5: 2, 6: 3, 7: 3}
+ROW = {2: 0, 3: 2, 4: 1, 5: 1, 6: 0, 7: 2}
+col_of = lambda n: COL[n]
+row_of = lambda n: ROW[n]
 
 TRK = 14
-XT = [420.0, 1730.0]                              # global x of each column's module input terminals
+GUTTER = 270
+XT = [400.0]
+for _ in range(3):
+    XT.append(XT[-1] + S * (N_LOCAL_W - 70) + GUTTER)      # global x of each column's input terminals
 OX = [x - S * 70 for x in XT]
 RIGHT = [ox + S * N_LOCAL_W for ox in OX]
 GAP_TOP, GAP_H, MOD_H = [], 14 * 8, S * 550
@@ -276,7 +283,7 @@ for r in range(3):
 OY = [GAP_TOP[r] + GAP_H - S * 20 for r in range(3)]
 MOD_BOTTOM = [GAP_TOP[r] + GAP_H + MOD_H for r in range(3)]
 LEGEND_Y = MOD_BOTTOM[2] + 50
-W = RIGHT[1] + 3 * 16 + 70
+W = RIGHT[3] + 3 * 16 + 70
 H = LEGEND_Y + 300
 
 
@@ -286,7 +293,7 @@ def G(n, x, y_):
 
 SENS = {0: dict(cx=130.0, cy=GAP_TOP[0] + GAP_H + 120, lane=250.0, label='i1 · pulser1 (U1)',
                 note='sensor click at 1 ns'),
-        1: dict(cx=130.0, cy=GAP_TOP[1] + GAP_H + 120, lane=266.0, label='i2 · pulser2 (U4)',
+        1: dict(cx=130.0, cy=GAP_TOP[2] + GAP_H + 120, lane=266.0, label='i2 · pulser2 (U4)',
                 note='click at 1 ns + dt')}
 
 
@@ -305,12 +312,13 @@ def p0(s):
 chan_y = {}
 for row in range(3):
     j = 0
-    for col in (0, 1):
-        n = 2 + row + 3 * col
-        k = len(fanin[n])
-        for i in reversed(range(k)):                  # outermost (lowest) slot gets the highest channel
-            j += 1
-            chan_y[(fanin[n][i], n)] = GAP_TOP[row] + TRK * j
+    for col in range(4):
+        for n in range(2, 8):
+            if COL[n] != col or ROW[n] != row:
+                continue
+            for i in reversed(range(len(fanin[n]))):      # outermost (lowest) slot gets the highest channel
+                j += 1
+                chan_y[(fanin[n][i], n)] = GAP_TOP[row] + TRK * j
 
 
 def build():
@@ -321,7 +329,7 @@ def build():
              f'<marker id="ah{c}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto">'
              f'<path d="M0 0L10 5L0 10Z" fill="{col}"/></marker>' for c, col in LOOP.items()) + '</defs>',
          f'<rect width="{W:.0f}" height="{H:.0f}" fill="#fff"/>',
-         T(40, 44, 'Six transponders · the toy network drawn as six copies of the single-transponder schematic', 26, BLACK, 600),
+         T(40, 44, 'Six transponders · laid out like the network graph, each drawn as a copy of the single-transponder schematic', 26, BLACK, 600),
          T(40, 70, 'Every box is one copy of single_transponder_simple.pdf; the pulsers are replaced by the links. '
                    'Wire colour = sending node. Blue monospace = variable names in toy_example.py / notebook N06.',
            13, GREY)]
