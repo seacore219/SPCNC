@@ -72,38 +72,38 @@ Ib2init = 19.0
 # meaning:     output bias current given to every node [uA]
 # schematic:   I_b2, "bias4 in" -> U2 drain (LTspice uses ~160 uA)
 # vs original: was flag --Ib2init (default 16); now a variable, set to 19
-# does:        becomes Ib2; sets the firing test (l.497) and the pulse size sent downstream (l.511)
+# does:        becomes Ib2; sets the firing test (RHS step 2 firing test) and the pulse size sent downstream (RHS step 3 `amp =` line)
 
 I1sw_uA = 14.0
 # meaning:     switching current (threshold) of the input nTron [uA]
 # schematic:   U3 (input nTron, Q1)
 # vs original: was flag --I1sw (args.I1sw, default 20); now a variable named I1sw_uA, set to 14
-# does:        becomes Inw1_sw; the input-click test is i_nw + gate > Inw1_sw (l.517)
+# does:        becomes Inw1_sw; the input-click test is i_nw + gate > Inw1_sw (RHS step 3 click test)
 
 I2sw_uA = 20.0
 # meaning:     switching current (threshold) of the output nTron [uA]
 # schematic:   U2 (output nTron, Q2)
 # vs original: was flag --I2sw (args.I2sw, default 20); renamed I2sw_uA, same value
-# does:        becomes Inw2_sw; the firing test is i_loop + Ib2 > Inw2_sw (l.497)
+# does:        becomes Inw2_sw; the firing test is i_loop + Ib2 > Inw2_sw (RHS step 2 firing test)
 
 split = 0.5
 # meaning:     fraction of a spike's output current sent on to the nodes it feeds (rest goes to a shunt)
 # schematic:   no single part; stands in for the L2 / R1 current division of loop 4 (R1 = R_s2)
 # vs original: was flag --split (args.split, default 0.1); now a variable, set to 0.5
-# does:        copied to transponder_current_divider; used only in amp = Ib2*split/n (l.511)
+# does:        copied to transponder_current_divider; used only in amp = Ib2*split/n (RHS step 3 `amp =` line)
 
 ib1_overrides = {2: 13.0, 4: 11.2}
 # meaning:     per-node exceptions to Ib1init: {node number: bias in uA}; 2 = t1, 4 = t3
 # schematic:   bias3 of one particular box (t1, t3)
 # vs original: was flag --ib1 NODE VALUE, repeatable (args.ib1, a list of pairs); now a dict. The
 #              dict values (13, 11.2) are mine; the script's default is no overrides
-# does:        reset_state() overwrites transponder_bias1[node] with each value (l.429)
+# does:        reset_state() overwrites transponder_bias1[node] with each value (reset_state `ib1_overrides` loop)
 
 ib2_overrides = {}
 # meaning:     per-node exceptions to Ib2init
 # schematic:   bias4 of one particular box
 # vs original: was flag --ib2 NODE VALUE (args.ib2); now a dict, empty as in the script's default
-# does:        reset_state() overwrites transponder_bias2[node] (l.430)
+# does:        reset_state() overwrites transponder_bias2[node] (reset_state `ib2_overrides` loop)
 
 T_END = 100e-9
 # meaning:     simulated time [s]
@@ -126,7 +126,7 @@ Ls1 = 5 * 1.0e-9
 # meaning:     inductance of the shunt branch around U3
 # schematic:   L1 (5 nH), "L_s1", loop 2
 # vs original: unchanged
-# does:        in y1/y2 (l.539-540)
+# does:        in y1/y2 (RHS step 4)
 
 Rs1 = 2
 # meaning:     resistance of the shunt branch around U3 [ohm]
@@ -144,7 +144,7 @@ RT0 = 3
 # meaning:     resistance of the storage loop when U2 is not switched [ohm]
 # schematic:   R2, "R_T", loop 3 (R2 = 4 ohm in LTspice, 3 ohm here)
 # vs original: unchanged
-# does:        RT = RT0 normally (l.496), RT0 + a 1000 ohm pulse while U2 fires (l.492)
+# does:        RT = RT0 normally (RHS step 2), RT0 + a 1000 ohm pulse while U2 fires (RHS step 2)
 
 Lnw = 10 * 1.0e-9
 # meaning:     inductance of an nTron channel
@@ -156,12 +156,12 @@ Rnorm = 1000
 # meaning:     resistance of an nTron channel when it is switched [ohm]
 # schematic:   R_nw1(t) of U3; for U2 it is added onto R2
 # vs original: unchanged
-# does:        scales LinearPulse into a resistance (l.492, l.525)
+# does:        scales LinearPulse into a resistance (RHS step 2, RHS step 3)
 
 ref_period = 0.003 * 1.0e-6
 # meaning:     rest time (3 ns) after a click before the same nTron can click again
 # schematic:   none (model bookkeeping)
-# vs original: unchanged value. The script's comment says "also not used??"; it is used (l.493, l.522)
+# vs original: unchanged value. The script's comment says "also not used??"; it is used (RHS step 2, RHS step 3)
 # does:        refractory timer in RHS and the white gap in the gradient raster
 
 print(f"input threshold {Inw1_sw*1e6} uA, output threshold {Inw2_sw*1e6} uA, split {split}")
@@ -468,7 +468,7 @@ print("initial state vector [uA]:", np.round(transponder_initial_state*1e6, 2))
 # is why section 6 rebuilds it.
 
 # %%
-# vs original: identical logic. Removed: debug prints; `click_delay` temp variable (l.513 now inlines it).
+# vs original: identical logic. Removed: debug prints; `click_delay` temp variable (RHS step 3 now inlines it).
 #              Added: comments only.
 def RHS(t, x):
   nw_currents   = x[::2]    # current through U3's channel (drain -> source), loop 2
@@ -593,7 +593,7 @@ plt.tight_layout(); plt.show()
 
 # %%
 # vs original: NEW (post-processing added to the script after the run; not in main). Same recipe
-#              as RHS step 3 (l.508-514), applied to the recorded click times.
+#              as RHS step 3 (RHS step 3), applied to the recorded click times.
 gate_parts = [dict() for _ in range(N_transponders)]
 gate_current = np.zeros((N_transponders, len(t)))
 for i_in in range(N_transponders):
