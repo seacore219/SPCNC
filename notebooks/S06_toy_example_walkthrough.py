@@ -89,6 +89,28 @@ ref_period = 0.003 * 1.0e-6   # 3 ns: how long a node stays "clicked" before it 
 print(f"input threshold {Inw1_sw*1e6} uA, output threshold {Inw2_sw*1e6} uA, split {split}")
 
 # %% [markdown]
+# ### Section 1 variables ↔ schematic (bluntly)
+#
+# | variable | schematic part | what it does |
+# |---|---|---|
+# | `Ib1init`, `Ib1`, `ib1_overrides` | **bias3 / I_b1** → U3 drain | current through U3's channel at rest. U3 clicks when this + gate current > `Inw1_sw` |
+# | `Ib2init`, `Ib2`, `ib2_overrides` | **bias4 / I_b2** → U2 drain | sets the size of the pulse a spike sends out: `Ib2·split/n` |
+# | `I1sw_uA`, `Inw1_sw` | **U3** switching current | threshold of the input nTron |
+# | `I2sw_uA`, `Inw2_sw` | **U2** switching current | threshold of the output nTron (`i_loop + Ib2 > Inw2_sw` → spike) |
+# | `split`, `transponder_current_divider` | **output junction: L2 / R1** | **only** scales the gate pulse delivered to downstream U3 gates (loop ①). Does not touch `i_nw`, `i_loop`, the shunt, or the receiver's bias |
+# | `Ls1`, `Rs1` | **L1, R3** (loop ②) | shunt branch around U3 |
+# | `LT`, `RT0` | **Lb1, R2** (loop ③) | storage loop |
+# | `Lnw`, `Rnorm` | inside **U3 / U2** | channel inductance / normal-state resistance |
+# | `ref_period` | none | bookkeeping: lockout after a click |
+# | `dt_ns`, `T_END` | none (pulsers i1/i2 timing, sim length) | |
+# | `delay` matrix | **delay boxes** on each link | |
+#
+# Full picture of all six transponders wired as in this circuit: `docs/figures/N06_network_schematic.png`
+# (regenerate with `python docs/figures/make_network_schematic.py --render`).
+#
+# ![six transponders](../docs/figures/N06_network_schematic.png)
+
+# %% [markdown]
 # ## 2. The two pulse shapes
 #
 # Everything in the model is built from two shapes:
@@ -98,6 +120,12 @@ print(f"input threshold {Inw1_sw*1e6} uA, output threshold {Inw2_sw*1e6} uA, spl
 # * **`OutputPulse`** — a sigmoid rise times an exponential decay. It is the shape of the current
 #   one spike delivers to a downstream gate; it peaks at about **0.61**, so a spike of nominal
 #   amplitude `amp` delivers at most `0.61 * amp`.
+
+# %% [markdown]
+# **Section 2 ↔ schematic.** `LinearPulse(t0, width, rise, fall)` = R_nw(t) of U3 or U2 while it is
+# resistive (`t0` = click time, `Rnorm` × 0..1). `OutputPulse(t0, tau, mu0)` = the current an upstream
+# spike pushes through the delay line + R_in/L_in into loop ① (`t0` = click time + link delay;
+# `tau`, `mu0` = rise/decay shape). Neither is a single physical part.
 
 # %%
 def LinearPulse(t, t0=5.0e-9, width=0.5e-9, rise=1.0e-9, fall=0.5e-9):  # trapezoid, 0..1
