@@ -164,16 +164,16 @@ The simulation keeps a notebook of what has happened (click times, who is "ready
 
 **vs original:** identical logic. Removed: debug prints and the `click_delay` temporary (now inlined at RHS step 3). Added: comments.
 
-**Line numbers:** a notebook has none, so elsewhere in this document and in the notebook comments, places in `RHS` are named ("RHS step 2 firing test", etc.). The "script line" columns below are line numbers in `transponder_model-whit_0918/src/tests/toy_example.py` on branch `toy-example-recurrent-rasters`. Your own copy (e.g. `toy_example_raster.py`) may differ by a few lines.
+**Line numbers:** a notebook has none, so elsewhere in this document and in the notebook comments, places in `RHS` are named ("RHS step 2 firing test", etc.). The "script line" columns below are line numbers in `toy_example.py` on `main` (Whit's original). The notebook's code comments use the same numbers (`[orig l.N]`).
 
 ### Setup lines
 
 | script line | what it does | schematic |
 |---|---|---|
-| 161 `def RHS(t, x)` | "Given the time and the currents, work out what happens next." | — |
-| 164 `nw_currents = x[::2]` | pull out every transponder's U3 channel current (every other number in `x`) | U3 wire |
-| 165 `loop_currents = x[1::2]` | pull out every transponder's storage-loop current | loop ③ |
-| 167 `eps = 1e-11` | "close enough" window for matching clock times (10 ps) | — |
+| 159 `def RHS(t, x)` | "Given the time and the currents, work out what happens next." | — |
+| 162 `nw_currents = x[::2]` | pull out every transponder's U3 channel current (every other number in `x`) | U3 wire |
+| 163 `loop_currents = x[1::2]` | pull out every transponder's storage-loop current | loop ③ |
+| 165 `eps = 1e-11` | "close enough" window for matching clock times (10 ps) | — |
 
 ### Step 1 — the two sensors: the outside world pokes the network
 
@@ -181,11 +181,11 @@ Sensors i1 and i2 stand in for the pulsers (U1, U4) on the left of the schematic
 
 | script line | what it does |
 |---|---|
-| 169–170 | go through each sensor and each click time it still has scheduled (i1 at 1 ns, i2 at 1 ns + `dt`) |
-| 171 | is the clock now (almost exactly) at that click time? |
-| 173 | mark the sensor as "clicked" |
-| 176 | **write the click time into the record** — every transponder that listens to this sensor will read it in Step 3 |
-| 177 | cross it off the to-do list so it fires once |
+| 167–168 | go through each sensor and each click time it still has scheduled (i1 at 1 ns, i2 at 1 ns + `dt`) |
+| 169 | is the clock now (almost exactly) at that click time? |
+| 171 | mark the sensor as "clicked" |
+| 174 | **write the click time into the record** — every transponder that listens to this sensor will read it in Step 3 |
+| 175 | cross it off the to-do list so it fires once |
 
 ### Step 2 — the output nTron U2: "did this transponder fire?"
 
@@ -193,31 +193,31 @@ U2 has no current of its own in the model. Its effect is that when it flips resi
 
 | script line | what it does | schematic |
 |---|---|---|
-| 180–181 | for each transponder: has it fired recently? | U2 |
-| 185 | look up when it last fired | — |
-| 187 | while firing, loop ③'s resistance is R2 plus a pulse of 1000 Ω for ~2 ns. That resistance dumps the stored current | R2 + U2 switching |
-| 189–190 | after `ref_period` (3 ns) it is allowed to fire again | refractory period |
-| 192–193 | if not firing, loop ③'s resistance is just R2 (`RT0`) | R2 |
+| 178–179 | for each transponder: has it fired recently? | U2 |
+| 183 | look up when it last fired | — |
+| 185 | while firing, loop ③'s resistance is R2 plus a pulse of 1000 Ω for ~2 ns. That resistance dumps the stored current | R2 + U2 switching |
+| 187–188 | after `ref_period` (3 ns) it is allowed to fire again | refractory period |
+| 190–191 | if not firing, loop ③'s resistance is just R2 (`RT0`) | R2 |
 | **406** | **the firing test: `i_loop + Ib2 > Inw2_sw`.** Storage-loop current feeds U2's gate; bias4 (`Ib2`) runs through U2's drain; if the sum beats U2's threshold, U2 flips | gate of U2 + bias4 |
-| 198–199 | mark it fired and record the time. **This is the spike**: the only moment current "leaves" the transponder | output loop ④ |
+| 196–197 | mark it fired and record the time. **This is the spike**: the only moment current "leaves" the transponder | output loop ④ |
 
 ### Step 3 — the input nTron U3: "did enough arrive from upstream?"
 
 | script line | what it does | schematic |
 |---|---|---|
-| 203–204 | for each transponder whose U3 is ready (not already clicked) | U3 |
-| 205–208 | start with no resistance and no gate current | — |
-| 209 | go through every transponder that sends to this one | links / delay boxes |
-| 210 | count how many places that sender feeds (its fan-out) | output junction |
-| 211 | the sender's output bias (`Ib2`) | bias4 of the sender |
+| 201–202 | for each transponder whose U3 is ready (not already clicked) | U3 |
+| 203–206 | start with no resistance and no gate current | — |
+| 207 | go through every transponder that sends to this one | links / delay boxes |
+| 208 | count how many places that sender feeds (its fan-out) | output junction |
+| 209 | the sender's output bias (`Ib2`) | bias4 of the sender |
 | **420** | **`amp = Ib2 × split / n`**: the size of the pulse this sender gives each receiver. This is the only place `split` is used | output junction L2/R1 |
-| 214–216 | for every spike the sender has ever fired, work out when it arrives: spike time + link delay | delay box |
-| 217 | add that pulse's current (shape from `OutputPulse`) to this node's gate current. Several pulses add up (coincidence detection) | loop ① (R_in, L_in) |
-| 220–221 | store the totals so we can plot them later | — |
+| 212–214 | for every spike the sender has ever fired, work out when it arrives: spike time + link delay | delay box |
+| 215 | add that pulse's current (shape from `OutputPulse`) to this node's gate current. Several pulses add up (coincidence detection) | loop ① (R_in, L_in) |
+| 218–219 | store the totals so we can plot them later | — |
 | **426** | **the input test: `i_nw + gate current > Inw1_sw`.** If U3's own current plus the gate boost beats its threshold, U3 flips | U3 |
-| 224–225 | mark it clicked and record the time | — |
-| 228–234 | after 3 ns it may click again | refractory period |
-| 236–238 | while clicked, U3 has a resistance pulse of up to 1000 Ω (about 2.5 ns). This forces current out of U3 and into the other branches | U3 resistive |
+| 222–223 | mark it clicked and record the time | — |
+| 226–232 | after 3 ns it may click again | refractory period |
+| 234–236 | while clicked, U3 has a resistance pulse of up to 1000 Ω (about 2.5 ns). This forces current out of U3 and into the other branches | U3 resistive |
 
 ### Step 4 — the circuit physics: "where does the current go?"
 
@@ -226,14 +226,14 @@ between three parallel paths to ground, and inductors resist sudden change, so c
 
 | script line | what it does | schematic |
 |---|---|---|
-| 240 | for each transponder... | — |
-| 241 | `i1` = the incoming bias current | bias3 / `Ib1` |
-| 242–243 | read this transponder's two current numbers | U3 wire, loop ③ |
-| 244 | `Rnw` = U3's resistance right now (0 unless it just clicked, from RHS step 3) | U3 |
-| 245 | `RT` = loop ③'s resistance right now (R2, plus U2 when it fires, from RHS step 2) | R2 + U2 |
-| 248 | `y1` = how fast U3's channel current is changing | U3 branch |
-| 249 | `y2` = how fast the storage-loop current is changing | loop ③ |
-| 250–252 | return those rates to the solver, which takes the next 1 ps step and calls `RHS` again | — |
+| 238 | for each transponder... | — |
+| 239 | `i1` = the incoming bias current | bias3 / `Ib1` |
+| 240–241 | read this transponder's two current numbers | U3 wire, loop ③ |
+| 242 | `Rnw` = U3's resistance right now (0 unless it just clicked, from RHS step 3) | U3 |
+| 243 | `RT` = loop ③'s resistance right now (R2, plus U2 when it fires, from RHS step 2) | R2 + U2 |
+| 246 | `y1` = how fast U3's channel current is changing | U3 branch |
+| 247 | `y2` = how fast the storage-loop current is changing | loop ③ |
+| 248–250 | return those rates to the solver, which takes the next 1 ps step and calls `RHS` again | — |
 
 Why a click leads to a spike a few ns later: when U3 turns resistive (RHS step 3), current is pushed out of
 U3 into the shunt (L1/R3) and the storage loop (Lb1/R2). The inductor makes `i_loop` rise slowly. When
