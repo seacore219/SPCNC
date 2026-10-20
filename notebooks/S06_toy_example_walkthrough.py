@@ -37,54 +37,132 @@ plt.rcParams["figure.dpi"] = 110
 # %% [markdown]
 # ## 1. Parameters
 #
-# These replace the script's flags. Values below are Whit's settings plus t3's input bias raised to
-# 11.2 µA so t3 fires — equivalent to
+# These replace the script's command-line flags. The values below are the settings used in this
+# walkthrough (chosen to reproduce the traces you showed from Whit); the script's own defaults are
+# `--Ib1init 16 --Ib2init 16 --I1sw 20 --I2sw 20 --split 0.1 --dt 5`. Equivalent command:
 #
 # ```
 # python toy_example.py --dt 35 --Ib1init 12 --ib1 2 13 --ib1 4 11.2 --Ib2init 19 --I1sw 14 --split 0.5
 # ```
 #
+# **Comment key used on every variable below**
+# * `meaning`   — what the quantity is physically
+# * `schematic` — which part of `single_transponder_simple.pdf` it is
+# * `vs original` — how it differs from `toy_example.py` on `main` (the script as Whit wrote it)
+# * `does`      — what the line does in the code
+#
 # Biases are in **µA** here and converted to amps below, as in the script.
 # Per-node overrides use the **matrix row index**: 0 = i1, 1 = i2, 2 = t1, … 7 = t6.
 
 # %%
-dt_ns   = 35.0    # --dt      : delay between the two sensor clicks [ns]
-Ib1init = 12.0    # --Ib1init : input-nTron bias for every node [uA]
-                  #   schematic: I_b1, "bias3 in" -> U3 drain (LTspice uses ~150 uA)
-Ib2init = 19.0    # --Ib2init : output-nTron bias for every node [uA]
-                  #   schematic: I_b2, "bias4 in" -> U2 drain (LTspice uses ~160 uA)
-I1sw_uA = 14.0    # --I1sw    : input-nTron switching current (threshold) [uA]
-                  #   schematic: switching current of U3 (input nTron, Q1)
-I2sw_uA = 20.0    # --I2sw    : output-nTron switching current (threshold) [uA]
-                  #   schematic: switching current of U2 (output nTron, Q2)
-split   = 0.5     # --split   : fraction of a node's output current sent on to the nodes it feeds
-                  #   schematic: no single part; stands in for loop 4 (L2 / R1). The rest of U2's
-                  #   current is taken to go into the shunt R1 (R_s2)
+# ---- the knobs ------------------------------------------------------------------------------
+dt_ns = 35.0
+# meaning:     time between the two sensor clicks [ns]
+# schematic:   pulser2 (U4) fires this long after pulser1 (U1)
+# vs original: was flag --dt (args.dt, default 5 ns); now a variable named dt_ns, set to 35
+# does:        converted to seconds (dt) below; used in sensor_pulses
 
-ib1_overrides = {2: 13.0, 4: 11.2}   # --ib1 N value  (node index -> uA)
-ib2_overrides = {}                   # --ib2 N value
+Ib1init = 12.0
+# meaning:     input bias current given to every node [uA]
+# schematic:   I_b1, "bias3 in" -> U3 drain (LTspice uses ~150 uA)
+# vs original: was flag --Ib1init (default 16); now a variable, set to 12
+# does:        becomes Ib1, the starting value of i_nw and the bias in the circuit equations
 
-T_END = 100e-9    # simulated time [s]
+Ib2init = 19.0
+# meaning:     output bias current given to every node [uA]
+# schematic:   I_b2, "bias4 in" -> U2 drain (LTspice uses ~160 uA)
+# vs original: was flag --Ib2init (default 16); now a variable, set to 19
+# does:        becomes Ib2; sets the firing test (l.497) and the pulse size sent downstream (l.511)
+
+I1sw_uA = 14.0
+# meaning:     switching current (threshold) of the input nTron [uA]
+# schematic:   U3 (input nTron, Q1)
+# vs original: was flag --I1sw (args.I1sw, default 20); now a variable named I1sw_uA, set to 14
+# does:        becomes Inw1_sw; the input-click test is i_nw + gate > Inw1_sw (l.517)
+
+I2sw_uA = 20.0
+# meaning:     switching current (threshold) of the output nTron [uA]
+# schematic:   U2 (output nTron, Q2)
+# vs original: was flag --I2sw (args.I2sw, default 20); renamed I2sw_uA, same value
+# does:        becomes Inw2_sw; the firing test is i_loop + Ib2 > Inw2_sw (l.497)
+
+split = 0.5
+# meaning:     fraction of a spike's output current sent on to the nodes it feeds (rest goes to a shunt)
+# schematic:   no single part; stands in for the L2 / R1 current division of loop 4 (R1 = R_s2)
+# vs original: was flag --split (args.split, default 0.1); now a variable, set to 0.5
+# does:        copied to transponder_current_divider; used only in amp = Ib2*split/n (l.511)
+
+ib1_overrides = {2: 13.0, 4: 11.2}
+# meaning:     per-node exceptions to Ib1init: {node number: bias in uA}; 2 = t1, 4 = t3
+# schematic:   bias3 of one particular box (t1, t3)
+# vs original: was flag --ib1 NODE VALUE, repeatable (args.ib1, a list of pairs); now a dict. The
+#              dict values (13, 11.2) are mine; the script's default is no overrides
+# does:        reset_state() overwrites transponder_bias1[node] with each value (l.429)
+
+ib2_overrides = {}
+# meaning:     per-node exceptions to Ib2init
+# schematic:   bias4 of one particular box
+# vs original: was flag --ib2 NODE VALUE (args.ib2); now a dict, empty as in the script's default
+# does:        reset_state() overwrites transponder_bias2[node] (l.430)
+
+T_END = 100e-9
+# meaning:     simulated time [s]
+# schematic:   none
+# vs original: NEW variable; the script writes 100*1e-9 directly in t_pts and solve_ivp
+# does:        end of the time axis in solve_network() and the plots
 
 # %%
-# unit conversion, exactly as in the script
+# ---- unit conversion and fixed circuit values ----------------------------------------------
 Inw1_sw = I1sw_uA * 1.0e-6     # input ntron switching current [A]
 Inw2_sw = I2sw_uA * 1.0e-6     # output ntron switching current [A]
 Ib1 = Ib1init * 1.0e-6         # schematic: I_b1 (bias3)
 Ib2 = Ib2init * 1.0e-6         # schematic: I_b2 (bias4)
 dt  = dt_ns * 1.0e-9
 transponder_current_divider = split
+# vs original: same conversions. Only the source changes: args.X -> the variables above.
+#              The script's --generator option (time-of-flight generator sets dt) is not included.
 
-# Transponder circuit parameters (fixed in the script, not flags)
-Ls1 = 5 * 1.0e-9    # input ntron shunt inductance       schematic: L1 (5 nH), "L_s1" - loop 2
-Rs1 = 2             # input ntron shunt resistance       schematic: R3, "R_s1" - loop 2 (R3 = 3 ohm in LTspice)
-LT  = 150 * 1.0e-9  # transponder loop inductance        schematic: Lb1 (~148 nH), storage inductor "L_T" - loop 3
-RT0 = 3             # transponder loop resistance        schematic: R2, "R_T" - loop 3 (R2 = 4 ohm in LTspice)
-Lnw   = 10 * 1.0e-9 # ntron channel inductance         schematic: U3's "L_nw1" (inside the nTron; no separate part)
-Rnorm = 1000        # ntron channel normal-state resistance
-                    #   used for U3 switching ("R_nw1(t)") and for U2 switching, which is added onto R2 (see RT)
-ref_period = 0.003 * 1.0e-6   # 3 ns: how long a node stays "clicked" before it can click again
-                              #   (model bookkeeping, no schematic part)
+Ls1 = 5 * 1.0e-9
+# meaning:     inductance of the shunt branch around U3
+# schematic:   L1 (5 nH), "L_s1", loop 2
+# vs original: unchanged
+# does:        in y1/y2 (l.539-540)
+
+Rs1 = 2
+# meaning:     resistance of the shunt branch around U3 [ohm]
+# schematic:   R3, "R_s1", loop 2 (R3 = 3 ohm in LTspice, 2 ohm here)
+# vs original: unchanged
+# does:        in y1/y2
+
+LT = 150 * 1.0e-9
+# meaning:     inductance of the storage loop
+# schematic:   Lb1 (~148 nH), "L_T", loop 3
+# vs original: unchanged
+# does:        in y1/y2
+
+RT0 = 3
+# meaning:     resistance of the storage loop when U2 is not switched [ohm]
+# schematic:   R2, "R_T", loop 3 (R2 = 4 ohm in LTspice, 3 ohm here)
+# vs original: unchanged
+# does:        RT = RT0 normally (l.496), RT0 + a 1000 ohm pulse while U2 fires (l.492)
+
+Lnw = 10 * 1.0e-9
+# meaning:     inductance of an nTron channel
+# schematic:   L_nw1 inside U3 (no separate part)
+# vs original: unchanged
+# does:        in y1/y2
+
+Rnorm = 1000
+# meaning:     resistance of an nTron channel when it is switched [ohm]
+# schematic:   R_nw1(t) of U3; for U2 it is added onto R2
+# vs original: unchanged
+# does:        scales LinearPulse into a resistance (l.492, l.525)
+
+ref_period = 0.003 * 1.0e-6
+# meaning:     rest time (3 ns) after a click before the same nTron can click again
+# schematic:   none (model bookkeeping)
+# vs original: unchanged value. The script's comment says "also not used??"; it is used (l.493, l.522)
+# does:        refractory timer in RHS and the white gap in the gradient raster
 
 print(f"input threshold {Inw1_sw*1e6} uA, output threshold {Inw2_sw*1e6} uA, split {split}")
 
@@ -128,6 +206,8 @@ print(f"input threshold {Inw1_sw*1e6} uA, output threshold {Inw2_sw*1e6} uA, spl
 # `tau`, `mu0` = rise/decay shape). Neither is a single physical part.
 
 # %%
+# vs original: LinearPulse same maths (the script stores t-t0 in a temp variable delta_t);
+#              OutputPulse identical.
 def LinearPulse(t, t0=5.0e-9, width=0.5e-9, rise=1.0e-9, fall=0.5e-9):  # trapezoid, 0..1
   if (t-t0 < 0) or (t-t0 > width+fall+rise):
     return 0
@@ -158,8 +238,12 @@ plt.tight_layout(); plt.show()
 # 0 means no connection. Rows/columns 0–1 are the two sensors (i1, i2), 2–7 are transponders t1–t6.
 
 # %%
+# vs original: `delay` is CHANGED (see below); names, connectivity, input_delays, input_connections same
+#              as the script's logic. Row = sender, column = receiver.
 names = ['i1', 'i2', 't1', 't2', 't3', 't4', 't5', 't6']
 ##                       to: i1  i2  t1  t2  t3  t4  t5  t6    from:
+# vs original: the script's matrix is purely feedforward (t1->t3, t2->t3, t3->t4; t4-t6 send nothing).
+# Here: t1,t2,t3 are mutually recurrent, t3->t4 is the one feedforward link, t4,t5,t6 are recurrent.
 delay = 1.0e-9* np.array([[  0 , 0 , 5 , 0 , 0 , 0 , 9 , 0],   # i1
                           [  0 , 0 , 0 , 5 , 0 , 0 , 0 , 5],   # i2
                           [  0 , 0 , 0 , 5 , 5 , 0 , 0 , 0],   # t1  -> t2, t3
@@ -254,6 +338,8 @@ plt.show()
 # 12 + 2.9 > 14 and the node fires; a 1.5 µA pulse doesn't.
 
 # %%
+# vs original: NEW section (not in the script). A stand-alone one-transponder copy of the rules,
+#              firing each nTron at most once. y1/y2 are copied from RHS.
 PEAK = 0.6063   # max of OutputPulse (section 2)
 
 def single_node(pulse_peak, Ib1_n=12e-6, Ib2_n=19e-6, t_pulse=5e-9, t_end=40e-9):
@@ -329,6 +415,9 @@ plt.tight_layout(); plt.show()
 # parameters, which is what running the script fresh does.
 
 # %%
+# vs original: the script runs this block once at import (top level, using args.*). Here it is a
+#              function so the network can be re-run. Same initial values; bias overrides come from
+#              ib1_overrides / ib2_overrides dicts instead of args.ib1 / args.ib2.
 def reset_state():
   global transponder_bias1, transponder_bias2, input_states, output_states
   global input_click_times, output_click_times, sensor_pulses
@@ -379,6 +468,8 @@ print("initial state vector [uA]:", np.round(transponder_initial_state*1e6, 2))
 # is why section 6 rebuilds it.
 
 # %%
+# vs original: identical logic. Removed: debug prints; `click_delay` temp variable (l.513 now inlines it).
+#              Added: comments only.
 def RHS(t, x):
   nw_currents   = x[::2]    # current through U3's channel (drain -> source), loop 2
   loop_currents = x[1::2]   # "I_loop": current around the storage loop 3 (Lb1, R2) into U2's gate
@@ -458,6 +549,8 @@ def RHS(t, x):
 # sub-nanosecond switching events.
 
 # %%
+# vs original: the script calls solve_ivp inside main() with 100e-9 written in; here it is a function
+#              using T_END, and calls reset_state() first.
 def solve_network():
   reset_state()
   t_pts = np.linspace(0, T_END, num=1000)
@@ -499,6 +592,8 @@ plt.tight_layout(); plt.show()
 # contribution separately; `gate_current[i]` is their sum.
 
 # %%
+# vs original: NEW (post-processing added to the script after the run; not in main). Same recipe
+#              as RHS step 3 (l.508-514), applied to the recorded click times.
 gate_parts = [dict() for _ in range(N_transponders)]
 gate_current = np.zeros((N_transponders, len(t)))
 for i_in in range(N_transponders):
@@ -516,6 +611,7 @@ for i_in in range(N_transponders):
 # another one (0 = i1 … 7 = t6).
 
 # %%
+# vs original: NEW (notebook only). `node` picks which transponder to inspect.
 node = 4   # t3
 need = (Inw1_sw - transponder_bias1[node])*1e6
 print(f"{names[node]}: input bias {transponder_bias1[node]*1e6:.1f} uA -> needs {need:.2f} uA of gate current to click\n")
@@ -535,6 +631,7 @@ print(f"\nlargest summed gate current on {names[node]}: {gate_current[node].max(
 # sensors | t1–t3 | t4–t6.
 
 # %%
+# vs original: NEW (the script has an equivalent raster added after main; not in main).
 fig, ax = plt.subplots(figsize=(8, 3.5))
 for n in range(N_transponders):
   ax.vlines(np.array(output_click_times[n])/1.0e-9, n-0.4, n+0.4, color='k', lw=2,
@@ -557,6 +654,7 @@ plt.show()
 # Uses `node` from section 6.
 
 # %%
+# vs original: NEW (the script has an equivalent gate-trace plot added after main; not in main).
 n = node
 inw = solution.y[2*n]
 fig, axs2 = plt.subplots(2, sharex=True, figsize=(8, 5))
@@ -581,6 +679,7 @@ plt.show()
 # white for `ref_period` after an input click. Solid red = spike, dotted red = input click.
 
 # %%
+# vs original: NEW (added to the script after main; the original has only the 6-panel trace plot).
 def gradient_raster(ax, gate_current, input_click_times, output_click_times, title=None):
   gmax  = gate_current.max() if gate_current.max() > 0 else 1.0
   shade = gate_current/gmax
@@ -614,6 +713,7 @@ plt.show()
 # around 11 µA. Each value is a full solve (~1 min). Edit `sweep_node` / `sweep_values` to taste.
 
 # %%
+# vs original: NEW (notebook only). Re-runs the whole network once per input bias value.
 sweep_node   = 4
 sweep_values = [10.5, 11.0, 11.2, 12.0]   # uA
 
