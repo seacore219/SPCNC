@@ -32,7 +32,7 @@ import argparse
 import spcnc.tof_input_generator as tof_gen
 
 # [orig l.9] create the flag reader
-parser = argparse.ArgumentParser( # parses command line arguments
+parser = argparse.ArgumentParser(
                     prog='spcnc_toy_example',
                     description='prototype spiking network simulation',
                     epilog='')
@@ -41,33 +41,27 @@ parser = argparse.ArgumentParser( # parses command line arguments
 # ---------------- STEP 2: the two pulse shapes ----------------
 # [orig l.14] LinearPulse: trapezoid between 0 and 1. x Rnorm = an nTron's resistance while it is switched.
 #   t = now, t0 = start, width = flat top, rise / fall = ramp times
-def LinearPulse(t, t0 = 5.0e-9, width=0.5e-9, rise=1.0e-9, fall=0.5e-9): ## makes the trapezoid pulse
+def LinearPulse(t, t0 = 5.0e-9, width=0.5e-9, rise=1.0e-9, fall=0.5e-9):
   # [orig l.15-16] before the pulse starts or after it ends: 0 (nTron superconducting)
   if (t-t0 < 0) or (t-t0 > width+fall+rise): 
     return 0
   # [orig l.17-21] ramping up: straight line 0 -> 1 over `rise`
   if ((t-t0) > 0) and ((t - t0) < rise):
-    # rising
     delta_t = t-t0
-    #print(delta_t/rise)
     return delta_t/rise 
   # [orig l.22-26] ramping down: straight line 1 -> 0 over `fall`
   if (t-t0 > width+rise) and (t-t0 <= width+fall+rise):
-    # falling
     delta_t = (t0+width+fall+rise)-t
-    #print(delta_t/fall)
-    return (delta_t/fall) # Ohm 
+    return (delta_t/fall)
   # [orig l.27-28] flat top: 1
   else: 
    return 1
 
 # [orig l.30] OutputPulse: the current one upstream spike delivers into a node's gate (loop 1).
 #   t0 = where it is about half way up, tau = decay time, mu0 = how sharp the rise is
-def OutputPulse(t, t0=1e-9, tau=1.0e-9, mu0=0.2e-9): ## sigmoid from 0 to 1 as t goes to t0 for the output rise
-  ## tau is the decay of the exponetial
-  ## t0 is approximately the location of 50% peak on the leading edge
+def OutputPulse(t, t0=1e-9, tau=1.0e-9, mu0=0.2e-9):
   # [orig l.33] (smooth step up around t0) x (exponential decay); peak about 0.61. Note it is already ~20% of nominal 0.35 ns BEFORE t0
-  return (1.0 - 1.0/(math.exp((t - t0)/mu0) + 1.0))*math.exp(- ((t - t0)/tau)) # exponential decay
+  return (1.0 - 1.0/(math.exp((t - t0)/mu0) + 1.0))*math.exp(- ((t - t0)/tau))
 
 """
 Units: can we default to us? 
@@ -78,30 +72,28 @@ This defines the input currents
 
 # ---------------- STEP 3: the command-line flags (the knobs) ----------------
 # [orig l.41] each flag below becomes a variable. Biases / thresholds are in microamps here.
-# flags
-# [orig l.42] [meaning] base name of the plot files written to ../results
+# [orig l.42] base name of the plot files written to ../results
 parser.add_argument("--output", help="output plots file name", default="toy_example" )
-# [orig l.43] [meaning] input bias of every node (uA) | [schematic] I_b1, bias3 -> U3 drain (LTspice ~150 uA) | default 16
+# [orig l.43] input bias of every node (uA) | [schematic] I_b1, bias3 -> U3 drain (LTspice ~150 uA) | default 16
 parser.add_argument("--Ib1init", help="I_b1 initial value in uA", type=float, default=16 )
-# [orig l.44] [meaning] output bias of every node (uA) | [schematic] I_b2, bias4 -> U2 drain (LTspice ~160 uA) | default 16
+# [orig l.44] output bias of every node (uA) | [schematic] I_b2, bias4 -> U2 drain (LTspice ~160 uA) | default 16
 parser.add_argument("--Ib2init", help="I_b1 initial value in uA", type=float, default=16 )
-# [orig l.45] [meaning] U3 switching current = input threshold (uA) | [schematic] U3 | default 20
+# [orig l.45] U3 switching current = input threshold (uA) | [schematic] U3 | default 20
 parser.add_argument("--I1sw", help="input ntron switching current in uA", type=float, default=20 )
-# [orig l.46] [meaning] U2 switching current = output threshold (uA) | [schematic] U2 | default 20
+# [orig l.46] U2 switching current = output threshold (uA) | [schematic] U2 | default 20
 parser.add_argument("--I2sw", help="output ntron switching current in uA", type=float, default=20 )
-# [orig l.47] [meaning] fraction of a spike sent to the next gates (rest -> shunt) | [schematic] L2/R1 division of loop 4 | default 0.1
+# [orig l.47] fraction of a spike sent to the next gates (rest -> shunt) | [schematic] L2/R1 division of loop 4 | default 0.1
 parser.add_argument("--split", help="current splitting fraction", type=float, default=0.1 )
 # [orig l.48] use the time-of-flight generator to set the gap between the two sensor clicks
 parser.add_argument("--generator", help="use tof generator" , action='store_true' )
-# [orig l.49] [meaning] gap between the two sensor clicks (ns) | [schematic] pulser2 (U4) fires this long after pulser1 (U1) | default 5
+# [orig l.49] gap between the two sensor clicks (ns) | [schematic] pulser2 (U4) fires this long after pulser1 (U1) | default 5
 parser.add_argument("--dt", help="delta t in ns, ignored if generator is used", type=float, default=5 )
 
-# [orig l.51] [meaning] per-node input bias, repeatable: --ib1 NODE VALUE, e.g. --ib1 2 13 sets t1 to 13 uA
+# [orig l.51] per-node input bias, repeatable: --ib1 NODE VALUE, e.g. --ib1 2 13 sets t1 to 13 uA
 #   NODE = row number of the delay table: 0 = i1, 1 = i2, 2 = t1 ... 7 = t6. [schematic] bias3 of one box
 parser.add_argument('--ib1', nargs=2, action='append', type=float, help='set node [0] input bias to value [1]')
 # [orig l.52] same for the output bias (bias4)
 parser.add_argument('--ib2', nargs=2, action='append', type=float, help='set node [0] output bias to value [1]')
-## nargs = 2 means expects exactly 2 arguments
 # [new] which node to draw the gate-current trace for (default 4 = t3)
 parser.add_argument('--trace_node', type=int, default=4, help='matrix index of node for the gate-current trace plot (0=i1, 1=i2, 2=t1 ... 7=t6); default t3')
 # [orig l.54] read the flags from the command line
@@ -113,38 +105,35 @@ print(args.ib1)
 
 # ---------------- STEP 4: convert flags to SI units and set the fixed circuit values ----------------
 # [orig l.58] U3 threshold, uA -> A
-Inw1_sw = args.I1sw*1.0e-6  ## input ntron switching current ; takes in raw command line values in uA, converts to uA by doing x1e-6 
+Inw1_sw = args.I1sw*1.0e-6
 # [orig l.59] U2 threshold, uA -> A
-Inw2_sw = args.I2sw*1.0e-6  ## output ntron switching current
+Inw2_sw = args.I2sw*1.0e-6
 
 # [orig l.61] input bias, uA -> A   [schematic] I_b1
-Ib1 = args.Ib1init*1.0e-6      ## intial input ntron bias 
+Ib1 = args.Ib1init*1.0e-6
 # [orig l.62] output bias, uA -> A  [schematic] I_b2
-Ib2 = args.Ib2init*1.0e-6      ## initial output ntron bias
+Ib2 = args.Ib2init*1.0e-6
 
 # [orig l.64] fixed circuit values (not flags)
-# Transponder circuit paramters
-# [orig l.65] [meaning] inductance of the shunt around U3 | [schematic] L1, 5 nH, loop 2
-Ls1 = 5 * 1.0e-9  ## input ntron shunt inductance
-# [orig l.66] [meaning] resistance of that shunt (ohm) | [schematic] R3, loop 2 (3 ohm in LTspice, 2 here)
-Rs1 = 2           ## input ntron shunt resistance
-# [orig l.67] [meaning] storage-loop inductance | [schematic] Lb1 ~148 nH, loop 3
-LT  = 150 * 1.0e-9## transponder loop inductance
-# [orig l.68] [meaning] storage-loop resistance when U2 is not switched (ohm) | [schematic] R2, loop 3 (4 ohm in LTspice, 3 here)
-RT0 = 3           ## transponder loop resistance
+# [orig l.65] inductance of the shunt around U3 | [schematic] L1, 5 nH, loop 2
+Ls1 = 5 * 1.0e-9
+# [orig l.66] resistance of that shunt (ohm) | [schematic] R3, loop 2 (3 ohm in LTspice, 2 here)
+Rs1 = 2
+# [orig l.67] storage-loop inductance | [schematic] Lb1 ~148 nH, loop 3
+LT  = 150 * 1.0e-9
+# [orig l.68] storage-loop resistance when U2 is not switched (ohm) | [schematic] R2, loop 3 (4 ohm in LTspice, 3 here)
+RT0 = 3
 
-# [orig l.70] [meaning] inductance of an nTron channel | [schematic] L_nw inside U3 / U2
-Lnw   = 10 * 1.0e-9 ## ntron channel inductance
-# [orig l.71] [meaning] resistance of an nTron channel when switched (ohm) | [schematic] R_nw(t) of U3; for U2 it is added onto R2
-Rnorm = 1000        ## ntron channel normal state resistance 
+# [orig l.70] inductance of an nTron channel | [schematic] L_nw inside U3 / U2
+Lnw   = 10 * 1.0e-9
+# [orig l.71] resistance of an nTron channel when switched (ohm) | [schematic] R_nw(t) of U3; for U2 it is added onto R2
+Rnorm = 1000
 
 # [orig l.73] unused variable (the original's own comment says so)
-recover_time1 = 3.0e-9 ## not actuall used??
-# Refractory period
-# [orig l.74-75] [meaning] rest time (3 ns) after a click before that nTron can click again. The original's comment says
+recover_time1 = 3.0e-9
+# [orig l.74-75] rest time (3 ns) after a click before that nTron can click again. The original's comment says
 #   'also not used??' but it IS used: in RHS at orig l.187 and l.229
-ref_period = 0.003 *1.0e-6 ## also not used??
-# current in loop goes to zero when state goes to 1.
+ref_period = 0.003 *1.0e-6
 
 
 
@@ -166,30 +155,28 @@ delay = 1.0e-9* np.array([[  0 , 0 , 5 , 0 , 0 , 0 , 9 , 0],   # i1
 ## i1->t1 (5ns), i1->t5 (9ns), i2->t2 (5ns), i2->t6 (5ns) sensor inputs (unchanged)
 ## t1<->t2<->t3<->t1 all-to-all recurrent, t3->t4 feedforward (no t4->t3), t4<->t5<->t6<->t4 all-to-all recurrent
 ## a nonzero entry = connection with that delay in ns; set an entry to 0 to cut that connection
-# [orig l.92] same table with 1 where a link exists, else 0
 connectivity = np.minimum(1,np.ceil(delay)) # converts binarizes delay function to either 0 or 1 (connnection or no connection)
 
 # [orig l.94] prints (8, 8)
-print(np.shape(delay)) ## prints (8,8) for the size of the delay matrix
+print(np.shape(delay))
 # [orig l.95] prints 8
-print(len(delay)) ## prints the number of transponders
+print(len(delay))
 
 # [orig l.97] number of nodes = number of rows (8)
-N_transponders = len(delay) ## number of transponders is number of rows
+N_transponders = len(delay)
 
 
 # ---------------- STEP 6: starting bookkeeping (nothing has fired yet) ----------------
 # [orig l.99] state codes: 0 = ready / superconducting, 1 = clicked
-# state:  0 is superconducting, 1 is clicking, 2 is recovery
 # [orig l.100] every U3 starts ready
-input_states = np.zeros(N_transponders) ## initialized as 0s since nothing fired yet, no current through
+input_states = np.zeros(N_transponders)
 # [orig l.101] every U2 starts ready
-output_states = np.zeros(N_transponders) ## initialized as 0s since nothing fired yet, no current through
+output_states = np.zeros(N_transponders)
 
 # [orig l.103] history of input clicks, one empty list per node
-input_click_times = [[] for _ in range(N_transponders)] ## history of click (firing) times [0,0,0,0,0,0,0,0]
+input_click_times = [[] for _ in range(N_transponders)]
 # [orig l.104] history of spikes, one empty list per node
-output_click_times = [[] for _ in range(N_transponders)] ## history of click (firing) times [0,0,0,0,0,0,0,0]
+output_click_times = [[] for _ in range(N_transponders)]
 
 # [orig l.106] sensor gap, ns -> s
 dt = 1.0e-9*args.dt
@@ -200,61 +187,56 @@ if args.generator:
   dt = ev["tof"]
 
 # [orig l.112] when each sensor clicks: i1 at 1 ns, i2 at 1 ns + dt   [schematic] pulser1 (U1), pulser2 (U4)
-sensor_pulses = [[1.0e-9],[1.0e-9 + dt]] ## when the pulsers fire; 1st at 1ns, 2nd at given time by args or 5ns as default
+sensor_pulses = [[1.0e-9],[1.0e-9 + dt]]
 
 # [orig l.114] every node gets the same input bias (bias3) ...
-transponder_bias1  = Ib1*np.ones(N_transponders) # uA ## skipped if no arg given; uniform biases in that case [1,1,1,1,1,1,1,1], multiplied by Ib1=16e-6 when no custom bias given
+transponder_bias1  = Ib1*np.ones(N_transponders)
 # [orig l.115] ... and the same output bias (bias4)
-transponder_bias2  = Ib2*np.ones(N_transponders) # uA ## skipped if no arg given; uniform biases in that case [1,1,1,1,1,1,1,1], multiplied by Ib2=16e-6 when no custom bias given
+transponder_bias2  = Ib2*np.ones(N_transponders)
 
 # [orig l.117-120] then apply the per-node --ib1 exceptions (value uA -> A)
-if args.ib1: # if 
+if args.ib1:
   for setting in args.ib1:
-    #print(f"setting node {setting[0]} b1 = {setting[1]}")
-    transponder_bias1[int(setting[0])] = setting[1]*1.0e-6 # if used, converts to uA
+    transponder_bias1[int(setting[0])] = setting[1]*1.0e-6
 # [orig l.121-123] same for --ib2
 if args.ib2:
   for setting in args.ib2:
     transponder_bias2[int(setting[0])] = setting[1] *1.0e-6
 
 # [orig l.125] the split rule
-# most of the output ntron goes into a shunt only this fraction goes to the connected inputs
-# [orig l.126] [meaning] fraction of a spike's current sent on to the next gates | [schematic] L2/R1 division; used ONLY in RHS step 3 (orig l.210)
-transponder_current_divider = args.split # split is the fraction of the output current that goes to the connected inputs. The rest goes to the shunt.
+# [orig l.126] fraction of a spike's current sent on to the next gates | [schematic] L2/R1 division; used ONLY in RHS step 3 (orig l.210)
+transponder_current_divider = args.split
 
 # [orig l.128] values that RHS updates at every step
-## Resistances emulating firing of ntrons; this is updated every time step by RHS
 # [orig l.129] U3's resistance R_nw1(t): 0 = superconducting
-transponder_Rnw_input = np.zeros(N_transponders) # input 
+transponder_Rnw_input = np.zeros(N_transponders)
 # [orig l.130] loop 3's resistance R_T(t): R2, plus U2 while it is switched
-transponder_RT_loop   = RT0*np.ones(N_transponders)  # output
+transponder_RT_loop   = RT0*np.ones(N_transponders)
 # [orig l.131] record of the gate current (for plotting; not used in the physics)
-transponder_input_gate_current = np.zeros(N_transponders) # input 
+transponder_input_gate_current = np.zeros(N_transponders)
 # [orig l.132] record of i_nw + gate current (for plotting)
-transponder_source_current = np.zeros(N_transponders) # input 
+transponder_source_current = np.zeros(N_transponders)
 
 # [orig l.134] starting U3 channel currents = the bias currents (each U3 carries its whole bias at rest)
-init_input_current  = transponder_bias1 # starting input currents = bias currents
+init_input_current  = transponder_bias1
 # [orig l.135] storage loops start empty
 init_loop_currents  = np.zeros(N_transponders)
 
 
 # [orig l.138] the vector handed to the solver: 2 slots per node = 16 (even = i_nw, odd = i_loop)
-transponder_initial_state =  np.empty((2*N_transponders), dtype=transponder_RT_loop.dtype) #initializes 16 slots for current values
+transponder_initial_state =  np.empty((2*N_transponders), dtype=transponder_RT_loop.dtype)
 # [orig l.139] even slots: i_nw = bias
 transponder_initial_state[0::2] = init_input_current
 # [orig l.140] odd slots: i_loop = 0
 transponder_initial_state[1::2] = init_loop_currents
-#print(f"transponder_initial_state = {transponder_initial_state}")
 
 
 # ---------------- STEP 7: flip the wiring table to 'who sends to me?' ----------------
 # [orig l.143]
-# This matrix gives the columns
 # [orig l.144] one empty list per receiver
 input_connections = [[] for _ in range(len(input_states))] 
 # [orig l.145] transpose: row = receiver, column = sender
-input_delays = delay.T ## .T transposes the matrix 
+input_delays = delay.T
 # [orig l.146] for each receiver i ...
 for i,arow in enumerate(connectivity.T):
   # [orig l.147] ... and each possible sender j
@@ -264,14 +246,11 @@ for i,arow in enumerate(connectivity.T):
       # [orig l.149] remember that j sends to i
       input_connections[i].append(j)
 
-#print("input connections:")
-#print(input_connections)
 
 # [orig l.154] (re-initialises output_states; harmless duplicate of l.101)
-output_states = np.zeros(N_transponders) ## initializes the outputs to 0 since no firing yet
-#output_click_times = np.array([0 , 0, 0, 0 ,0]) ## could be array
+output_states = np.zeros(N_transponders)
 # [orig l.156] (re-initialises the spike histories; harmless duplicate of l.104)
-output_click_times = [[] for _ in range(len(input_states))] ## 
+output_click_times = [[] for _ in range(len(input_states))]
 
 
 
@@ -279,8 +258,6 @@ output_click_times = [[] for _ in range(len(input_states))] ##
 # [orig l.159] The solver calls this at every tiny time step with the time (t) and all 16 currents (x),
 # and gets back how fast each current is changing. Everything below is evaluated at that instant.
 def RHS(t, x):
-  # y[0] = di_{nw}/dt
-  # y[1] = di_{loop}/dt
   # [orig l.162] even entries of x: U3 channel current of each node
   nw_currents   = x[::2]  
   # [orig l.163] odd entries: storage-loop current of each node
@@ -300,28 +277,20 @@ def RHS(t, x):
         print(f"n = {n} i_click = {i_click} time {t} vs {sensor_click_t}")
         # [orig l.171] mark the sensor 'clicked'
         output_states[n] = 1
-        # simple threshold model of ntron firing. 
-        # OUTPUT Clicks
         # [orig l.174] RECORD THE CLICK TIME: every node listening to this sensor will find it in RHS step 3
-        output_click_times[n].append(t)#sensor_click_t) # or t?
+        output_click_times[n].append(t)
         # [orig l.175] remove it from the schedule so it fires once
         sensor_pulses[n].pop(i_click)
 
-  # Update the output currents for each transponder
   # ===== RHS step 2 - output nTron U2 (orig l.177-197): did each transponder fire? =====
   # [orig l.178] for each node
   for i_out, output_state in enumerate(output_states):
     # [orig l.179] U2 is currently switched (fired recently):
     if output_states[i_out] == 1:
-      # output state is firing
-      # get last click time and determine if it is reset
-      #print(f"output click: {i_out}, { output_click_times[i_out]}")
       # [orig l.183] when did it last fire?
       tlast                       = output_click_times[i_out][len(output_click_times[i_out])-1]
-      ## Simple nTron firing as a change in resistance
       # [orig l.185] while switched: loop resistance = R2 + a 1000 ohm pulse (2 ns). This dumps the stored loop current
       transponder_RT_loop[i_out]  = RT0 + Rnorm*LinearPulse(t,t0=tlast,width=2.0e-9)
-      # let the output state reset
       # [orig l.187] after ref_period (3 ns) ...
       if t-tlast > ref_period:
         # [orig l.188] ... U2 may fire again
@@ -332,10 +301,8 @@ def RHS(t, x):
     if output_states[i_out] == 0:
       # [orig l.191] loop resistance is just R2
       transponder_RT_loop[i_out] = RT0
-      # output state is ready to fire, should it fire?
       # [orig l.193] FIRING TEST: storage-loop current (U2's gate) + bias4 > U2's threshold?
       if loop_currents[i_out] + transponder_bias2[i_out] > Inw2_sw: 
-        # simple threshold model of ntron firing. 
         # [orig l.195] debug print
         print("output {}: click_t = {}".format(i_out, t))
         # [orig l.196] yes: U2 switches
@@ -343,8 +310,6 @@ def RHS(t, x):
         # [orig l.197] RECORD THE SPIKE TIME. This is the moment current leaves the transponder
         output_click_times[i_out].append(t)
 
-  # update the input currents
-  # input
   # ===== RHS step 3 - input nTron U3 (orig l.199-236): did enough arrive from upstream? =====
   # [orig l.201] for each node
   for i_in, input_state in enumerate(input_states):
@@ -352,7 +317,6 @@ def RHS(t, x):
     if input_states[i_in] == 0:
       # [orig l.203] superconducting: no resistance
       transponder_Rnw_input[i_in] = 0
-      # get all the input pulses
       # [orig l.205] start summing the gate current from zero
       ntron_gate_current = 0
       # [orig l.206] (record, for plotting)
@@ -365,7 +329,6 @@ def RHS(t, x):
         b2  = transponder_bias2[j_in]
         # [orig l.210] PULSE SIZE from this sender = Ib2 x split / fan-out (the only use of `split`)
         amp = b2*transponder_current_divider/n_split
-        #print("{:d} input from {:d} biased at {}, output {}/{} = {}".format(i_in, j_in, b2, b2*transponder_current_divider, n_split ,amp))
         # [orig l.212] for every spike that sender has ever fired ...
         for click_t in output_click_times[j_in]:
           # [orig l.213] the link delay (the delay box in the schematic) ...
@@ -374,37 +337,28 @@ def RHS(t, x):
           click_arrival       = click_t  + click_delay
           # [orig l.215] add that pulse's current right now to the gate current (loop 1). Pulses from several senders add up
           ntron_gate_current += amp*OutputPulse(t, t0=click_arrival)
-          #print(f"input sum {i_in}: click_t = {click_t}, delay[{j_in}] = {click_delay}  ntron gate {ntron_gate_current}")
-      # now for the internals of the transponder 
       # [orig l.218] (record i_nw + gate, for plotting)
       transponder_source_current[i_in]     = nw_currents[i_in] + ntron_gate_current
       # [orig l.219] (record gate current, for plotting)
       transponder_input_gate_current[i_in] = ntron_gate_current
       # [orig l.220] CLICK TEST: U3 channel current + gate current > U3's threshold?
       if nw_currents[i_in] + ntron_gate_current > Inw1_sw: 
-        # INPUT Clicks
         # [orig l.222] yes: U3 clicks
         input_states[i_in] = 1
         # [orig l.223] record the click time
         input_click_times[i_in].append(t)
-        #print("node {:d}: click_t = {}".format(i_in,t))
-      # add staying dead for recovery time
     # [orig l.226] U3 is clicked (resistive):
     if input_states[i_in] == 1:
-      #print(f"input fired at t={t}")
       # [orig l.228] when did it click?
       latest_input_click = input_click_times[i_in][len(input_click_times[i_in])-1]
       # [orig l.229] after 3 ns ...
       if t-latest_input_click > ref_period:
-        # reset
         # [orig l.231] debug print
         print("input reset")
         # [orig l.232] ... U3 is ready again
         input_states[i_in] = 0
-        #transponder_Rnw_input[i_in] = 0.0
       # [orig l.234] otherwise still resistive:
       else: 
-        # Turn on the loop resistance (effectivly the ntron gate-source resistance when firing)
         # [orig l.236] U3's resistance: 1000 ohm trapezoid (about 2.5 ns). This pushes current out of U3 into the other branches
         transponder_Rnw_input[i_in] = Rnorm*LinearPulse(t,t0=latest_input_click, width=1.0e-9)
   # ===== RHS step 4 - circuit physics (orig l.237-250): where does the current go? =====
@@ -422,8 +376,6 @@ def RHS(t, x):
     Rnw =  transponder_Rnw_input[i_node]
     # [orig l.243] loop 3's resistance right now (from RHS step 2)
     RT  = transponder_RT_loop[i_node]
-    #if i_node == 2:
-    #  print(f"{i_node} t={t}, Rnw = {Rnw},  RT = {RT}, in_total = {transponder_source_current[i_in]}")
     # [orig l.246] d(i_nw)/dt: how fast the U3 current changes (Kirchhoff + inductors)
     y1 = (-inw*Ls1*Rnw - i1*LT*Rs1 + iloop*LT*Rs1 + inw*LT*(Rnw + Rs1) + iloop*Ls1*RT)/(Lnw*(Ls1 - LT) - Ls1*LT)
     # [orig l.247] d(i_loop)/dt: how fast the storage-loop current changes
@@ -443,19 +395,8 @@ def main() -> int:
   """ Prototype network simulation"""
   # [orig l.256] print the wiring table
   print(delay)
-  #print(connectivity)
-  #print(connectivity.T)
   
-  #print("connectivity row sums give the number of loads for each output signal")
-  #for acol in connectivity:
-  #  print(np.sum(acol))
-  ## transpose and sum to get number of connections to transponder output.
-  #print("connectivity column sums give the number of inputs")
-  #for acol in connectivity.T:
-  #  print(np.sum(acol))
 
-  #for acol in delay.T:
-  #  print("col : {}\n".format(acol))
 
   # [orig l.271] the 1000 times at which results are saved (0-100 ns)
   t_pts = np.linspace(0, 100*1.0e-9, num=1000)
@@ -470,7 +411,6 @@ def main() -> int:
 
   # [orig l.278] the original 6-panel plot: for t1, t2, t3 (rows 4-9 of the solution) the U3 current (labelled 'gate') and the loop current (red)
   fig, axs = plt.subplots(6)
-  #fig.suptitle('Vertically stacked subplots')
   # [orig l.280-285] solution.y[2n] = i_nw of node n, solution.y[2n+1] = i_loop (uA)
   axs[0].plot(solution.t/1.0e-9, solution.y[4]/1.0e-6, label='gate 2')
   axs[1].plot(solution.t/1.0e-9, solution.y[5]/1.0e-6, 'r',label='loop 2')
@@ -478,10 +418,6 @@ def main() -> int:
   axs[3].plot(solution.t/1.0e-9, solution.y[7]/1.0e-6, 'r',label='loop 3')
   axs[4].plot(solution.t/1.0e-9, solution.y[8]/1.0e-6, label='gate 4')
   axs[5].plot(solution.t/1.0e-9, solution.y[9]/1.0e-6, 'r',label='loop 4')
-  #axs[2].plot(solution.t/1.0e-9, solution.y[4]/1.0e-6, label='input 3')
-  #axs[2].plot(solution.t/1.0e-9, solution.y[5]/1.0e-6, label='loop 3')
-  #axs[3].plot(solution.t/1.0e-9, solution.y[6]/1.0e-6, label='input 3')
-  #axs[3].plot(solution.t/1.0e-9, solution.y[7]/1.0e-6, label='loop 3')
 
   # [orig l.291] write dt and the biases on the figure
   axs[0].annotate(f"dt={dt//1.0e-9}, \nb1={transponder_bias1/1.0e-6}, \nb2={transponder_bias2/1.0e-6}", xycoords="subfigure points",xy=(1,1))
@@ -499,26 +435,17 @@ def main() -> int:
     ax.set(xlabel='time [ns]',ylabel='current [uA]')
 
   # [orig l.303-305] hide repeated labels
-  # Hide x labels and tick labels for top plots and y ticks for right plots.
   for ax in axs.flat:
     ax.label_outer()
-  #plt.legend()
   # [orig l.307-308] save the figure
   plt.savefig(f"../results/{args.output}.png", bbox_inches='tight',dpi=200)
   plt.savefig(f"../results/{args.output}.pdf", format="pdf", bbox_inches='tight',dpi=200)
 
-  #print(solution.y)
   # [orig l.311] 0 = solver finished OK
   print(f"solution status {solution.status}")
-  #plt.show()
 
-  # ------------------------------------------------------------------
 
   # ---------------- STEP 10 [new]: rebuild the gate current, then the three plots you asked for ----------------
-  # Post-processing: rebuild the gate current that RHS computes but throws away.
-  # Same formula as the input block of RHS: each upstream click at click_t arrives
-  # at click_t + delay and adds amp*OutputPulse. Uses the click times RHS recorded.
-  # ------------------------------------------------------------------
   # [new] time axis in seconds ...
   t   = solution.t
   # [new] ... and in ns
@@ -526,7 +453,7 @@ def main() -> int:
   # [new] node labels
   names = ['i1', 'i2'] + [f't{k}' for k in range(1, N_transponders-1)]
   # [new] gate_parts[i][j] = current node i receives from j; gate_current[i] = the sum (RHS computed it but threw it away)
-  gate_parts = [dict() for _ in range(N_transponders)]   # gate_parts[i][j] = current into i from j
+  gate_parts = [dict() for _ in range(N_transponders)]
   # [new] one row per node, one column per saved time
   gate_current = np.zeros((N_transponders, len(t)))
   # [new] for each receiver ...
@@ -550,13 +477,10 @@ def main() -> int:
 
   # [new] print every node's spike times (ns)
   print("output (spike) click times [ns]:")
-  # [new] for every node (sensors and transponders) print its spike times in ns, rounded to 0.01
   for n in range(N_transponders):
     print(f"  {names[n]}: {np.round(np.array(output_click_times[n])/1.0e-9, 2)}")
 
-  # [new] raster: one row per node, black tick = spike, red triangle = input click
-  # ---- 1) spike raster ----
-  # [new] figure
+  # [new] SPIKE RASTER: one row per node, black tick = spike, red triangle = input click
   fig, ax = plt.subplots(figsize=(8, 3.5))
   # [new] for each node
   for n in range(N_transponders):
@@ -568,7 +492,7 @@ def main() -> int:
       ax.plot(np.array(input_click_times[n])/1.0e-9, [n-0.45]*len(input_click_times[n]), 'v', color='tab:red', ms=4,
               label='input (gate) click' if not any(input_click_times[:n]) else None)
   # [new] dashed separators: sensors | t1-t3 | t4-t6
-  for y in (1.5, 4.5):   # separate sensors | block 1-2-3 | block 4-5-6
+  for y in (1.5, 4.5):
     ax.axhline(y, color='0.8', ls='--', lw=0.8)
   # [new] row labels
   ax.set_yticks(range(N_transponders), names)
@@ -582,9 +506,7 @@ def main() -> int:
   plt.savefig(f"../results/{args.output}_raster.png", bbox_inches='tight', dpi=200)
   plt.savefig(f"../results/{args.output}_raster.pdf", bbox_inches='tight')
 
-  # [new] gate-current trace for the node chosen with --trace_node: do pulses sum above threshold?
-  # ---- 2) gate-current trace for one node: pulses summing up to threshold ----
-  # [new] the chosen node
+  # [new] GATE-CURRENT TRACE for the node chosen with --trace_node: do the pulses sum above threshold?
   n = args.trace_node
   # [new] its U3 channel current over time
   inw = solution.y[2*n]
@@ -618,9 +540,7 @@ def main() -> int:
   plt.savefig(f"../results/{args.output}_gate_trace_{names[n]}.png", bbox_inches='tight', dpi=200)
   plt.savefig(f"../results/{args.output}_gate_trace_{names[n]}.pdf", bbox_inches='tight')
 
-  # [new] gradient raster: shade = gate current (white = none, black = the largest in the run); white again right after a click
-  # ---- 3) gradient raster: white = no current, black = max current, back to white after a click ----
-  # shade = gate current / largest gate current anywhere in the run (pitch black = maximum current)
+  # [new] GRADIENT RASTER: shade = gate current (white = none, black = the largest in the run); white again right after a click
   # [new] largest gate current anywhere (avoid dividing by 0)
   gmax  = gate_current.max() if gate_current.max() > 0 else 1.0
   # [new] scale every value to 0..1
@@ -628,7 +548,7 @@ def main() -> int:
   # [new] for each node ...
   for n in range(N_transponders):
     # [new] ... and each input click ...
-    for tc in input_click_times[n]:            # white while the nanowire is switched/recovering
+    for tc in input_click_times[n]:
       # [new] ... paint white for ref_period afterwards (node recovering)
       shade[n][(t > tc) & (t <= tc + ref_period)] = 0
   # [new] figure
@@ -637,7 +557,7 @@ def main() -> int:
   im = ax.imshow(shade, aspect='auto', cmap='Greys', vmin=0, vmax=1, interpolation='nearest',
                  extent=(tns[0], tns[-1], N_transponders-0.5, -0.5))
   # [new] overlay the clicks as red lines
-  for n in range(N_transponders):              # clicks as red lines, so they stand apart from the grey current
+  for n in range(N_transponders):
     # [new] solid red = spike
     ax.vlines(np.array(output_click_times[n])/1.0e-9, n-0.5, n+0.5, color='red', lw=1.8,
               label='output click (spike)' if n == 0 else None)
@@ -664,4 +584,4 @@ def main() -> int:
 
 # [orig l.316-317] run main() when the file is executed
 if __name__ == '__main__':
-  sys.exit(main())  # next section explains the use of sys.exit
+  sys.exit(main())
