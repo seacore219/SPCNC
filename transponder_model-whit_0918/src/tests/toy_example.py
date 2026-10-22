@@ -30,7 +30,9 @@ def LinearPulse(t, t0 = 5.0e-9, width=0.5e-9, rise=1.0e-9, fall=0.5e-9): ## make
 def OutputPulse(t, t0=1e-9, tau=1.0e-9, mu0=0.2e-9): ## sigmoid from 0 to 1 as t goes to t0 for the output rise
   ## tau is the decay of the exponetial
   ## t0 is approximately the location of 50% peak on the leading edge
-  return (1.0 - 1.0/(math.exp((t - t0)/mu0) + 1.0))*math.exp(- ((t - t0)/tau)) # exponential decay
+  # [new] 1/(1+e^-a) is algebraically identical to the original 1 - 1/(e^a + 1) but does not overflow
+  # when a spike is > ~140 ns old (original form crashed runs longer than ~150 ns)
+  return (1.0/(1.0 + math.exp(-(t - t0)/mu0)))*math.exp(- ((t - t0)/tau)) # exponential decay
 
 """
 Units: can we default to us? 
@@ -52,6 +54,14 @@ parser.add_argument('--ib1', nargs=2, action='append', type=float, help='set nod
 parser.add_argument('--ib2', nargs=2, action='append', type=float, help='set node [0] output bias to value [1]')
 ## nargs = 2 means expects exactly 2 arguments
 parser.add_argument('--trace_node', type=int, default=4, help='matrix index of node for the gate-current trace plot (0=i1, 1=i2, 2=t1 ... 7=t6); default t3')
+# [new] flags for the mutual-information / criticality sweep (defaults reproduce the original behaviour)
+parser.add_argument('--tmax', type=float, default=100, help='simulated time in ns')
+parser.add_argument('--max_step', type=float, default=1.0e-3, help='solver max step in ns (original: 1 ps)')
+parser.add_argument('--rate', type=float, default=0, help='if > 0, each sensor clicks as a Poisson process with this rate (clicks/ns), replacing the 2 fixed clicks')
+parser.add_argument('--sw_noise', type=float, default=0, help='std (uA) of U3 switching-current noise, redrawn each time U3 resets')
+parser.add_argument('--seed', type=int, default=0, help='random seed for --rate and --sw_noise')
+parser.add_argument('--save_spikes', default=None, help='save output spike times to this .npz file')
+parser.add_argument('--no_plots', action='store_true', help='skip all plots (for sweeps)')
 args = parser.parse_args()
 
 print(args.ib1)
@@ -112,6 +122,10 @@ if args.generator:
   dt = ev["tof"]
 
 sensor_pulses = [[1.0e-9],[1.0e-9 + dt]] ## when the pulsers fire; 1st at 1ns, 2nd at given time by args or 5ns as default
+rng = np.random.default_rng(args.seed) # [new]
+if args.rate > 0: # [new] Poisson sensor clicks: exponential gaps of mean 1/rate ns, kept below tmax
+  sensor_pulses = [list(1.0e-9*np.cumsum(rng.exponential(1/args.rate, size=int(3*args.rate*args.tmax)+10))) for _ in range(2)]
+  sensor_pulses = [[c for c in clicks if c < args.tmax*1.0e-9] for clicks in sensor_pulses]
 
 transponder_bias1  = Ib1*np.ones(N_transponders) # uA ## skipped if no arg given; uniform biases in that case [1,1,1,1,1,1,1,1], multiplied by Ib1=16e-6 when no custom bias given
 transponder_bias2  = Ib2*np.ones(N_transponders) # uA ## skipped if no arg given; uniform biases in that case [1,1,1,1,1,1,1,1], multiplied by Ib2=16e-6 when no custom bias given
@@ -123,6 +137,8 @@ if args.ib1: # if
 if args.ib2:
   for setting in args.ib2:
     transponder_bias2[int(setting[0])] = setting[1] *1.0e-6
+
+sw_offset = args.sw_noise*1.0e-6*rng.standard_normal(N_transponders) # [new] U3 switching-current noise, one draw per node
 
 # most of the output ntron goes into a shunt only this fraction goes to the connected inputs
 transponder_current_divider = args.split # split is the fraction of the output current that goes to the connected inputs. The rest goes to the shunt.
@@ -219,7 +235,7 @@ def RHS(t, x):
       # now for the internals of the transponder 
       transponder_source_current[i_in]     = nw_currents[i_in] + ntron_gate_current
       transponder_input_gate_current[i_in] = ntron_gate_current
-      if nw_currents[i_in] + ntron_gate_current > Inw1_sw: 
+      if nw_currents[i_in] + ntron_gate_current > Inw1_sw + sw_offset[i_in]: # [new] + noise offset (0 by default)
         # INPUT Clicks
         input_states[i_in] = 1
         input_click_times[i_in].append(t)
@@ -232,6 +248,7 @@ def RHS(t, x):
         # reset
         print("input reset")
         input_states[i_in] = 0
+        sw_offset[i_in] = args.sw_noise*1.0e-6*rng.standard_normal() # [new] fresh threshold draw for the next attempt
         #transponder_Rnw_input[i_in] = 0.0
       else: 
         # Turn on the loop resistance (effectivly the ntron gate-source resistance when firing)
@@ -270,12 +287,16 @@ def main() -> int:
   #for acol in delay.T:
   #  print("col : {}\n".format(acol))
 
-  t_pts = np.linspace(0, 100*1.0e-9, num=1000)
+  t_pts = np.linspace(0, args.tmax*1.0e-9, num=int(10*args.tmax)) # [new] tmax flag (was 100 ns)
 
   print(f"shunt/output current splilt: {transponder_current_divider}")
 
   print("Starting simulation")
-  solution = solve_ivp(RHS, (0, 100 * 1.0e-9), transponder_initial_state, t_eval= t_pts, max_step = 1.0e-12)
+  solution = solve_ivp(RHS, (0, args.tmax * 1.0e-9), transponder_initial_state, t_eval= t_pts, max_step = args.max_step*1.0e-9) # [new] tmax, max_step flags
+  if args.save_spikes: # [new] spike times (s) for the MI sweep; object array because nodes have different spike counts
+    np.savez(args.save_spikes, spikes=np.array([np.array(c) for c in output_click_times], dtype=object), tmax=args.tmax, delay=delay)
+  if args.no_plots:
+    return 0
 
   fig, axs = plt.subplots(6)
   #fig.suptitle('Vertically stacked subplots')
