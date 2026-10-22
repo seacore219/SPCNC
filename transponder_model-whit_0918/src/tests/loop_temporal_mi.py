@@ -10,7 +10,7 @@ Measure (IDTxl's JIDT discrete MI estimator, significance from its analytic surr
   Near criticality the loop remembers the kick longer (critical slowing down): I(tau) stays significant to larger tau.
   Far from it, I(tau) falls to the surrogate floor within a few bins.
 Control parameter: input bias Ib1 of the loop nodes only (a per-node bias on chip).
-Example:  python loop_temporal_mi.py --values 11 11.5 12 12.5 13 13.5 --runs 4 --tmax 20000
+Example:  python loop_temporal_mi.py --runs 8 --tmax 10000
 """
 import argparse, json, math, os, subprocess, sys
 from multiprocessing import Pool
@@ -22,7 +22,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 p = argparse.ArgumentParser()
-p.add_argument('--values', type=float, nargs='+', default=[11, 11.5, 12, 12.5, 13, 13.5], help='Ib1 of the loop nodes (uA)')
+p.add_argument('--values', type=float, nargs='+', default=[10.75, 11, 11.25, 11.5, 11.75, 12, 12.25, 12.5], help='Ib1 of the loop nodes (uA); m crosses 1 near 11.5 at split 0.8')
 p.add_argument('--loop', type=int, nargs='+', default=[5, 6, 7], help='rows of the loop nodes (5,6,7 = t4,t5,t6)')
 p.add_argument('--silence', type=int, nargs='+', default=[2, 3, 4], help='rows given Ib1 = 0 (2,3,4 = t1,t2,t3)')
 p.add_argument('--runs', type=int, default=4, help='independent long runs (seeds) per value')
