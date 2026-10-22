@@ -40,6 +40,8 @@ p.add_argument('--noise_range', type=float, nargs=2, default=[0.2, 0.8], help='s
 p.add_argument('--fixed', default='--Ib1init 12 --Ib2init 19 --I1sw 14 --I2sw 20 --split 0.24 --noise_dt 3 --max_step 5e-3',
                help='split 0.24: SPICE gate pulse peak / driving bias = 18.5/130 uA = 0.14 = 0.606 * split')
 p.add_argument('--seed', type=int, default=0, help='seed for drawing the bias samples')
+p.add_argument('--splits', type=float, nargs='+', default=None, help='split sweep instead of random biases: one sample per value')
+p.add_argument('--fixed_bias', type=float, nargs=3, default=[13, 19, 0.3], help='Ib1, Ib2 (all loop nodes) and sw_noise used with --splits')
 p.add_argument('--out', default='../results/loop_mi')
 p.add_argument('--workers', type=int, default=os.cpu_count())
 a = p.parse_args()
@@ -49,6 +51,9 @@ rng = np.random.default_rng(a.seed)
 B = np.column_stack([rng.uniform(*a.ib1_range, (a.samples, 3)), rng.uniform(*a.ib2_range, (a.samples, 3)),
                      rng.uniform(*a.noise_range, a.samples)])
 B[0] = [0.79 * 14] * 3 + [0.84 * 20] * 3 + [np.mean(a.noise_range)]  # Ib1 of t4,t5,t6 | Ib2 of t4,t5,t6 (uA) | sw_noise
+if a.splits:  # split sweep: same biases for every sample, split varies
+    a.samples = len(a.splits)
+    B = np.tile([a.fixed_bias[0]] * 3 + [a.fixed_bias[1]] * 3 + [a.fixed_bias[2]], (a.samples, 1))
 W = int(a.period / a.bin)  # bins between kicks
 
 
@@ -59,7 +64,7 @@ def simulate(job):  # one long run; cached, so an interrupted sweep resumes
         nodes = [x for n in a.silence for x in ('--ib1', str(n), '0')]
         nodes += [x for k, n in enumerate(a.loop) for x in ('--ib1', str(n), f'{B[s, k]:.3f}', '--ib2', str(n), f'{B[s, 3 + k]:.3f}')]
         cmd = [sys.executable, 'toy_example.py', *a.fixed.split(), *nodes, '--kick_nodes', *map(str, a.loop),
-               '--sw_noise', f'{B[s, 6]:.3f}', '--pulse_period', str(a.period), '--tmax', str(a.tmax), '--seed', str(seed), '--save_spikes', f, '--no_plots']
+               '--sw_noise', f'{B[s, 6]:.3f}', *(['--split', str(a.splits[s])] if a.splits else []), '--pulse_period', str(a.period), '--tmax', str(a.tmax), '--seed', str(seed), '--save_spikes', f, '--no_plots']
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
     return f
 
@@ -102,11 +107,13 @@ for s in range(a.samples):
     I, I95 = curve(mi, S, A)
     C, C95 = curve(cmi, S, A, P)
     sig = C > C95
-    row = dict(sample=s, ib1=B[s, :3].round(3).tolist(), ib2=B[s, 3:6].round(3).tolist(), sw_noise=round(float(B[s, 6]), 3), kicks=int(len(S)),
+    sig[0] = False  # lag 0 only contains the forced kick spikes themselves
+    late = A[:, -10:].sum(1) > 0  # loop still active 30 ns before the next kick
+    row = dict(sample=s, split=a.splits[s] if a.splits else None, ib1=B[s, :3].round(3).tolist(), ib2=B[s, 3:6].round(3).tolist(), sw_noise=round(float(B[s, 6]), 3), kicks=int(len(S)),
                m_loop=float(np.mean(kids)) if kids else float('nan'),
                ongoing_per_bin=float(P.mean() / 3),  # loop activity just before kicks (spontaneous + leftover)
                evoked_dX3_first5=float(A[S == 3, :5].mean()) if (S == 3).any() else float('nan'),
-               ignition=float((A[:, -10:].sum(1) > 0).mean()),
+               ignition=float(late[S > 0].mean() - late[S == 0].mean()),  # kick-driven: spontaneous firing cancels
                memory_ns=float((np.nonzero(sig)[0].max() + 1) * a.bin if sig.any() else 0),
                integrated_CMI_bits_ns=float(np.sum(np.where(sig, C, 0)) * a.bin),
                MI_tau=I.tolist(), MI95_tau=I95.tolist(), CMI_tau=C.tolist(), CMI95_tau=C95.tolist())
@@ -117,12 +124,13 @@ json.dump(rows, open(f'{a.out}/summary_loop.json', 'w'), indent=1)
 m = np.array([r['m_loop'] for r in rows]); ong = np.array([r['ongoing_per_bin'] for r in rows])
 fig, ax = plt.subplots(1, 4, figsize=(17, 3.6))
 for k, key, lab in [(0, 'memory_ns', 'kick memory: last significant CMI lag [ns]'),
-                    (1, 'integrated_CMI_bits_ns', 'integrated significant CMI [bit ns]'), (2, 'ignition', 'ignition fraction')]:
+                    (1, 'integrated_CMI_bits_ns', 'integrated significant CMI [bit ns]'), (2, 'ignition', 'kick-driven ignition (kick - no kick)')]:
     sc = ax[k].scatter(m, [r[key] for r in rows], c=ong, cmap='viridis')
     ax[k].axvline(1, color='r', ls=':'); ax[k].set(xlabel='m inside the loop', title=lab)
 fig.colorbar(sc, ax=ax[2], label='ongoing activity / node / bin')
 tau = np.arange(a.lags) * a.bin
-for i in np.argsort(m)[::max(1, len(rows) // 5)]:
-    ax[3].semilogy(tau, np.maximum(rows[i]['CMI_tau'], 1e-5), label=f"m={m[i]:.2f}")
-ax[3].set(title='CMI(dX ; x(tau) | x_pre)', xlabel='ns after kick', ylabel='bits'); ax[3].legend(fontsize=7)
+for i in np.argsort(-np.nan_to_num(m))[:5]:  # the five highest-m samples, significant lags only
+    c = np.array(rows[i]['CMI_tau']); c[np.array(rows[i]['CMI95_tau']) >= c] = np.nan
+    ax[3].semilogy(tau[1:], c[1:], 'o-', ms=3, label=f"m={m[i]:.2f}" + (f", split={rows[i]['split']}" if a.splits else ''))
+ax[3].set(title='significant CMI(dX ; x(tau) | x_pre)', xlabel='ns after kick', ylabel='bits'); ax[3].legend(fontsize=7)
 fig.tight_layout(); fig.savefig(f'{a.out}/loop_temporal_mi.png', dpi=150)
