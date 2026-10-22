@@ -115,6 +115,7 @@ for s in range(a.samples):
     C, C95 = curve(cmi, S, A, P)
     sig = C > C95
     sig[0] = False  # lag 0 only contains the forced kick spikes themselves
+    sigI = I > I95; sigI[0] = False  # plain MI: lower chance threshold; best readout when ongoing activity is low
     late = A[:, -10:].sum(1) > 0  # loop still active 30 ns before the next kick
     row = dict(sample=s, split=a.splits[s] if a.splits else None, ib1=B[s, :3].round(3).tolist(), ib2=B[s, 3:6].round(3).tolist(), sw_noise=round(float(B[s, 6]), 3), kicks=int(len(S)),
                m_loop=float(np.mean(kids)) if kids else float('nan'),
@@ -124,6 +125,8 @@ for s in range(a.samples):
                ignition=float(late[S > 0].mean() - late[S == 0].mean()),  # kick-driven: spontaneous firing cancels
                memory_ns=float((np.nonzero(sig)[0].max() + 1) * a.bin if sig.any() else 0),
                integrated_CMI_bits_ns=float(np.sum(np.where(sig, C, 0)) * a.bin),
+               memory_MI_ns=float(np.nonzero(sigI)[0].max() * a.bin if sigI.any() else 0),  # lag (start of bin) of last significant MI
+               integrated_MI_bits_ns=float(np.sum(np.where(sigI, I, 0)) * a.bin),
                MI_tau=I.tolist(), MI95_tau=I95.tolist(), CMI_tau=C.tolist(), CMI95_tau=C95.tolist())
     rows.append(row)
     print({k: (round(v, 3) if isinstance(v, float) else v) for k, v in row.items() if 'tau' not in k}, flush=True)
