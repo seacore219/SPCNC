@@ -62,6 +62,7 @@ parser.add_argument('--sw_noise', type=float, default=0, help='std (uA) of U3 sw
 parser.add_argument('--seed', type=int, default=0, help='random seed for --rate and --sw_noise')
 parser.add_argument('--save_spikes', default=None, help='save output spike times to this .npz file')
 parser.add_argument('--no_plots', action='store_true', help='skip all plots (for sweeps)')
+parser.add_argument('--pulse_period', type=float, default=0, help='if > 0, perturbation protocol: every pulse_period ns a kick of random size 0 (none), 1 (i1) or 2 (i1+i2)')
 args = parser.parse_args()
 
 print(args.ib1)
@@ -126,6 +127,11 @@ rng = np.random.default_rng(args.seed) # [new]
 if args.rate > 0: # [new] Poisson sensor clicks: exponential gaps of mean 1/rate ns, kept below tmax
   sensor_pulses = [list(1.0e-9*np.cumsum(rng.exponential(1/args.rate, size=int(3*args.rate*args.tmax)+10))) for _ in range(2)]
   sensor_pulses = [[c for c in clicks if c < args.tmax*1.0e-9] for clicks in sensor_pulses]
+pulse_times, pulse_sizes = np.array([]), np.array([], dtype=int)
+if args.pulse_period > 0: # [new] perturbation protocol (Fosque et al. 2025): kicks of known size at known times
+  pulse_times = np.arange(args.pulse_period, args.tmax, args.pulse_period)*1.0e-9
+  pulse_sizes = rng.integers(0, 3, len(pulse_times))
+  sensor_pulses = [list(pulse_times[pulse_sizes >= 1]), list(pulse_times[pulse_sizes == 2])]
 
 transponder_bias1  = Ib1*np.ones(N_transponders) # uA ## skipped if no arg given; uniform biases in that case [1,1,1,1,1,1,1,1], multiplied by Ib1=16e-6 when no custom bias given
 transponder_bias2  = Ib2*np.ones(N_transponders) # uA ## skipped if no arg given; uniform biases in that case [1,1,1,1,1,1,1,1], multiplied by Ib2=16e-6 when no custom bias given
@@ -183,7 +189,7 @@ def RHS(t, x):
   eps = 1.0e-11
 
   for n, clicks in enumerate(sensor_pulses):
-    for i_click, sensor_click_t in enumerate(clicks):  
+    for i_click, sensor_click_t in enumerate(clicks[:1]): # [new] [:1]: clicks are time-ordered, so only the next one can be due (speed-up for long runs)
       if( abs(t -sensor_click_t) <= eps ) :
         print(f"n = {n} i_click = {i_click} time {t} vs {sensor_click_t}")
         output_states[n] = 1
@@ -227,7 +233,7 @@ def RHS(t, x):
         b2  = transponder_bias2[j_in]
         amp = b2*transponder_current_divider/n_split
         #print("{:d} input from {:d} biased at {}, output {}/{} = {}".format(i_in, j_in, b2, b2*transponder_current_divider, n_split ,amp))
-        for click_t in output_click_times[j_in]:
+        for click_t in output_click_times[j_in][-20:]: # [new] [-20:]: older spikes are >57 ns old and their pulse is ~e^-57 (speed-up for long runs)
           click_delay         = input_delays[i_in][j_in]
           click_arrival       = click_t  + click_delay
           ntron_gate_current += amp*OutputPulse(t, t0=click_arrival)
@@ -294,7 +300,7 @@ def main() -> int:
   print("Starting simulation")
   solution = solve_ivp(RHS, (0, args.tmax * 1.0e-9), transponder_initial_state, t_eval= t_pts, max_step = args.max_step*1.0e-9) # [new] tmax, max_step flags
   if args.save_spikes: # [new] spike times (s) for the MI sweep; object array because nodes have different spike counts
-    np.savez(args.save_spikes, spikes=np.array([np.array(c) for c in output_click_times], dtype=object), tmax=args.tmax, delay=delay)
+    np.savez(args.save_spikes, spikes=np.array([np.array(c) for c in output_click_times], dtype=object), tmax=args.tmax, delay=delay, pulse_times=pulse_times, pulse_sizes=pulse_sizes)
   if args.no_plots:
     return 0
 
