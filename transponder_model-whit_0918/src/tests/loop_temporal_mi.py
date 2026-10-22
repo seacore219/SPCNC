@@ -78,9 +78,15 @@ def load(f):  # kick sizes, loop activity before / after each kick, in-loop desc
     after = np.array([x[o:o + W] for o in on[ok]]).reshape(-1, W)
     pre = np.array([min(3, x[o - 4:o - 1].sum()) for o in on[ok]], dtype=int)  # skips the bin right before the kick
     D = d['delay'] * 1e9
-    kids = [sum(np.any((sp[i] > t + D[j, i] + 1) & (sp[i] < t + D[j, i] + 8)) for i in a.loop if D[j, i] > 0)
-            for j in a.loop for t in sp[j]]
-    return d['pulse_sizes'][ok], after, pre, kids
+
+    def hits(j, t):  # partners of j that spike 1-8 ns after the pulse j sent at time t arrives (window shifts with the delay)
+        return sum(np.any((sp[i] > t + D[j, i] + 1) & (sp[i] < t + D[j, i] + 8)) for i in a.loop if D[j, i] > 0)
+    kids = [hits(j, t) for j in a.loop for t in sp[j]]
+    # interventional m: single-node kicks (the forced spike sits at the kick time) minus the same count after empty kicks
+    pt, ps = d['pulse_times'] * 1e9, d['pulse_sizes']
+    one = [hits(j, t) for t, k in zip(pt, ps) if k == 1 for j in a.loop if np.any(np.abs(sp[j] - t) < 0.05)]
+    none = [hits(j, t) for t, k in zip(pt, ps) if k == 0 for j in a.loop]
+    return d['pulse_sizes'][ok], after, pre, kids, one, none
 
 
 def curve(est, S, R, C=None):  # estimate and surrogate-95% at every lag
@@ -104,6 +110,7 @@ for s in range(a.samples):
     parts = [load(f'{a.out}/sample{s}_seed{r}.npz') for r in range(a.runs)]
     S, A, P = (np.concatenate([q[i] for q in parts]) for i in range(3))
     kids = sum((q[3] for q in parts), [])
+    one, none = sum((q[4] for q in parts), []), sum((q[5] for q in parts), [])
     I, I95 = curve(mi, S, A)
     C, C95 = curve(cmi, S, A, P)
     sig = C > C95
@@ -111,6 +118,7 @@ for s in range(a.samples):
     late = A[:, -10:].sum(1) > 0  # loop still active 30 ns before the next kick
     row = dict(sample=s, split=a.splits[s] if a.splits else None, ib1=B[s, :3].round(3).tolist(), ib2=B[s, 3:6].round(3).tolist(), sw_noise=round(float(B[s, 6]), 3), kicks=int(len(S)),
                m_loop=float(np.mean(kids)) if kids else float('nan'),
+               m_causal=float(np.mean(one) - np.mean(none)) if one and none else float('nan'), single_kicks=len(one),
                ongoing_per_bin=float(P.mean() / 3),  # loop activity just before kicks (spontaneous + leftover)
                evoked_dX3_first5=float(A[S == 3, :5].mean()) if (S == 3).any() else float('nan'),
                ignition=float(late[S > 0].mean() - late[S == 0].mean()),  # kick-driven: spontaneous firing cancels
