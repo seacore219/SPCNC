@@ -62,7 +62,9 @@ parser.add_argument('--sw_noise', type=float, default=0, help='std (uA) of U3 sw
 parser.add_argument('--seed', type=int, default=0, help='random seed for --rate and --sw_noise')
 parser.add_argument('--save_spikes', default=None, help='save output spike times to this .npz file')
 parser.add_argument('--no_plots', action='store_true', help='skip all plots (for sweeps)')
-parser.add_argument('--pulse_period', type=float, default=0, help='if > 0, perturbation protocol: every pulse_period ns a kick of random size 0 (none), 1 (i1) or 2 (i1+i2)')
+parser.add_argument('--pulse_period', type=float, default=0, help='if > 0, perturbation protocol: every pulse_period ns force a random number (0..len(kick_nodes)) of --kick_nodes to spike')
+parser.add_argument('--kick_nodes', type=int, nargs='+', default=[5, 6, 7], help='rows that the perturbation forces to spike (5,6,7 = t4,t5,t6)')
+parser.add_argument('--noise_dt', type=float, default=0, help='if > 0, redraw every node\'s switching-noise offset every noise_dt ns (ongoing noise -> spontaneous firing)')
 args = parser.parse_args()
 
 print(args.ib1)
@@ -128,10 +130,13 @@ if args.rate > 0: # [new] Poisson sensor clicks: exponential gaps of mean 1/rate
   sensor_pulses = [list(1.0e-9*np.cumsum(rng.exponential(1/args.rate, size=int(3*args.rate*args.tmax)+10))) for _ in range(2)]
   sensor_pulses = [[c for c in clicks if c < args.tmax*1.0e-9] for clicks in sensor_pulses]
 pulse_times, pulse_sizes = np.array([]), np.array([], dtype=int)
-if args.pulse_period > 0: # [new] perturbation protocol (Fosque et al. 2025): kicks of known size at known times
+if args.pulse_period > 0: # [new] perturbation protocol (Fosque et al. 2025): force dX random kick nodes to spike at known times
   pulse_times = np.arange(args.pulse_period, args.tmax, args.pulse_period)*1.0e-9
-  pulse_sizes = rng.integers(0, 3, len(pulse_times))
-  sensor_pulses = [list(pulse_times[pulse_sizes >= 1]), list(pulse_times[pulse_sizes == 2])]
+  pulse_sizes = rng.integers(0, len(args.kick_nodes) + 1, len(pulse_times))
+  sensor_pulses = [[] for _ in range(N_transponders)] # RHS step 1 forces a spike on any row with a scheduled time
+  for tk, k in zip(pulse_times, pulse_sizes):
+    for n in rng.choice(args.kick_nodes, k, replace=False):
+      sensor_pulses[n].append(tk)
 
 transponder_bias1  = Ib1*np.ones(N_transponders) # uA ## skipped if no arg given; uniform biases in that case [1,1,1,1,1,1,1,1], multiplied by Ib1=16e-6 when no custom bias given
 transponder_bias2  = Ib2*np.ones(N_transponders) # uA ## skipped if no arg given; uniform biases in that case [1,1,1,1,1,1,1,1], multiplied by Ib2=16e-6 when no custom bias given
@@ -145,6 +150,7 @@ if args.ib2:
     transponder_bias2[int(setting[0])] = setting[1] *1.0e-6
 
 sw_offset = args.sw_noise*1.0e-6*rng.standard_normal(N_transponders) # [new] U3 switching-current noise, one draw per node
+noise_next = [args.noise_dt*1.0e-9] # [new] time of the next ongoing-noise redraw (only used if --noise_dt > 0)
 
 # most of the output ntron goes into a shunt only this fraction goes to the connected inputs
 transponder_current_divider = args.split # split is the fraction of the output current that goes to the connected inputs. The rest goes to the shunt.
@@ -187,6 +193,10 @@ def RHS(t, x):
   loop_currents = x[1::2]
 
   eps = 1.0e-11
+
+  if args.noise_dt > 0 and t >= noise_next[0]: # [new] ongoing switching noise: fresh draw for every node each noise_dt
+    sw_offset[:] = args.sw_noise*1.0e-6*rng.standard_normal(N_transponders)
+    noise_next[0] = t + args.noise_dt*1.0e-9
 
   for n, clicks in enumerate(sensor_pulses):
     for i_click, sensor_click_t in enumerate(clicks[:1]): # [new] [:1]: clicks are time-ordered, so only the next one can be due (speed-up for long runs)
