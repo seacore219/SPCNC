@@ -16,7 +16,7 @@ Rerunning with the same arguments only simulates what is missing, then analyses 
 Example:  python loop_temporal_mi.py --samples 32 --runs 4 --tmax 10000
 """
 import argparse, json, math, os, subprocess, sys
-from multiprocessing import Pool
+from multiprocessing import get_context  # "fork": macOS defaults to "spawn", which re-runs this script in every worker
 import numpy as np
 np.math = math  # IDTxl still calls np.math, which numpy 2 removed
 from idtxl.estimators_jidt import JidtDiscreteMI, JidtDiscreteCMI
@@ -88,7 +88,7 @@ def curve(est, S, R, C=None):  # estimate and surrogate-95% at every lag
 
 
 jobs = [(s, r) for s in range(a.samples) for r in range(a.runs)]
-with Pool(a.workers) as pool:  # all runs in parallel; analysis only after every run exists
+with get_context("fork").Pool(a.workers) as pool:  # all runs in parallel; analysis only after every run exists
     for _ in pool.imap_unordered(simulate, jobs):
         pass
 

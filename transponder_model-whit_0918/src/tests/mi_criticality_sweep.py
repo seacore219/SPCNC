@@ -12,7 +12,7 @@ For each value of one control parameter (default: the input bias Ib1, the knob y
 Example:  python mi_criticality_sweep.py --values 10 11 12 13 --trials 20
 """
 import argparse, json, math, os, subprocess, sys
-from multiprocessing import Pool
+from multiprocessing import get_context  # "fork": macOS defaults to "spawn", which re-runs this script in every worker
 import numpy as np
 np.math = math  # IDTxl still calls np.math, which numpy 2 removed
 from idtxl.data import Data
@@ -82,7 +82,7 @@ subprocess.run([sys.executable, 'toy_example.py', '--tmax', '0.01', '--save_spik
 D = np.load(f'{a.out}/_wiring.npz', allow_pickle=True)['delay'] * 1e9  # wiring/delays (ns) read from toy_example.py itself
 
 rows = []
-with Pool(a.workers) as pool:
+with get_context("fork").Pool(a.workers) as pool:
     for v in a.values:
         files = pool.map(simulate, [(v, s) for s in range(a.trials)])
         X = np.stack([binned(f) for f in files], axis=2)  # (processes, samples, replications) = IDTxl 'psr'
