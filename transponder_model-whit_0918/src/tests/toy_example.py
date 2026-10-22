@@ -62,6 +62,7 @@ parser.add_argument('--sw_noise', type=float, default=0, help='std (uA) of U3 sw
 parser.add_argument('--seed', type=int, default=0, help='random seed for --rate and --sw_noise')
 parser.add_argument('--save_spikes', default=None, help='save output spike times to this .npz file')
 parser.add_argument('--no_plots', action='store_true', help='skip all plots (for sweeps)')
+parser.add_argument('--save_currents', action='store_true', help='also save t and the solver state (i_nw, i_loop per node) in the --save_spikes file')
 parser.add_argument('--pulse_period', type=float, default=0, help='if > 0, perturbation protocol: every pulse_period ns force a random number (0..len(kick_nodes)) of --kick_nodes to spike')
 parser.add_argument('--kick_nodes', type=int, nargs='+', default=[5, 6, 7], help='rows that the perturbation forces to spike (5,6,7 = t4,t5,t6)')
 parser.add_argument('--noise_dt', type=float, default=0, help='if > 0, redraw every node\'s switching-noise offset every noise_dt ns (ongoing noise -> spontaneous firing)')
@@ -310,7 +311,8 @@ def main() -> int:
   print("Starting simulation")
   solution = solve_ivp(RHS, (0, args.tmax * 1.0e-9), transponder_initial_state, t_eval= t_pts, max_step = args.max_step*1.0e-9) # [new] tmax, max_step flags
   if args.save_spikes: # [new] spike times (s) for the MI sweep; object array because nodes have different spike counts
-    np.savez(args.save_spikes, spikes=np.array([np.array(c) for c in output_click_times], dtype=object), tmax=args.tmax, delay=delay, pulse_times=pulse_times, pulse_sizes=pulse_sizes)
+    np.savez(args.save_spikes, spikes=np.array([np.array(c) for c in output_click_times], dtype=object), tmax=args.tmax, delay=delay, pulse_times=pulse_times, pulse_sizes=pulse_sizes,
+             **(dict(t=solution.t, y=solution.y) if args.save_currents else {}))
   if args.no_plots:
     return 0
 
