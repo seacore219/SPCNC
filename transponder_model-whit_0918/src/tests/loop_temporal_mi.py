@@ -77,6 +77,7 @@ def load(f):  # kick sizes, loop activity before / after each kick, in-loop desc
     ok = (on >= 4) & (on + W <= len(x))
     after = np.array([x[o:o + W] for o in on[ok]]).reshape(-1, W)
     pre = np.array([min(3, x[o - 4:o - 1].sum()) for o in on[ok]], dtype=int)  # skips the bin right before the kick
+    late = [np.mean(x[o - 20:o] > 0) for o in on[on >= 20]]  # order parameter: share of active 3 ns bins in the 60 ns before a kick
     D = d['delay'] * 1e9
 
     def hits(j, t):  # partners of j that spike 1-8 ns after the pulse j sent at time t arrives (window shifts with the delay)
@@ -105,7 +106,7 @@ def load(f):  # kick sizes, loop activity before / after each kick, in-loop desc
         credit, gen = cr.tolist(), g.tolist()
         sizes = np.bincount([find(i) for i in range(len(spikes))]).tolist() if spikes else []
         sizes = [x for x in sizes if x > 0]
-    return d['pulse_sizes'][ok], after, pre, kids, one, none, credit, gen, sizes
+    return d['pulse_sizes'][ok], after, pre, kids, one, none, credit, gen, sizes, late
 
 
 def curve(est, S, R, C=None):  # estimate and surrogate-95% at every lag
@@ -131,6 +132,7 @@ for s in range(a.samples):
     kids = sum((q[3] for q in parts), [])
     one, none = sum((q[4] for q in parts), []), sum((q[5] for q in parts), [])
     credit, gen, sizes = (np.array(sum((q[i] for q in parts), [])) for i in (6, 7, 8))
+    order = float(np.mean(sum((q[9] for q in parts), [])))
     I, I95 = curve(mi, S, A)
     C, C95 = curve(cmi, S, A, P)
     sig = C > C95
@@ -139,6 +141,7 @@ for s in range(a.samples):
     late = A[:, -10:].sum(1) > 0  # loop still active 30 ns before the next kick
     row = dict(sample=s, split=a.splits[s] if a.splits else None, ib1=B[s, :3].round(3).tolist(), ib2=B[s, 3:6].round(3).tolist(), sw_noise=round(float(B[s, 6]), 3), kicks=int(len(S)),
                m_loop=float(np.mean(kids)) if kids else float('nan'),
+               order_param=order,  # fraction of 3 ns bins with a loop spike, 140-200 ns after the previous kick
                m_exact=float(credit.mean()) if credit.size else float('nan'),  # children per spike from the recorded causes
                m_by_generation=[float(credit[gen == k].mean()) for k in range(6) if (gen == k).any()],
                avalanche_mean=float(sizes.mean()) if sizes.size else float('nan'), avalanche_max=int(sizes.max()) if sizes.size else 0,
@@ -158,8 +161,8 @@ json.dump(rows, open(f'{a.out}/summary_loop.json', 'w'), indent=1)
 # figure: left = MI vs lag after the kick (significant lags, one colour per setting); right = br and MI vs split, shared x axis
 x = np.array([r['split'] for r in rows]) if a.splits else np.arange(len(rows))
 xlab = 'split' if a.splits else 'sample'
-fig = plt.figure(figsize=(14, 8.5))
-gs = fig.add_gridspec(3, 2, width_ratios=[1.3, 1], hspace=0.1, wspace=0.25)
+fig = plt.figure(figsize=(17, 8.5))
+gs = fig.add_gridspec(3, 2, width_ratios=[1.9, 1], hspace=0.1, wspace=0.22)
 axT, axB, axI, axK = (fig.add_subplot(gs[:, 0]), fig.add_subplot(gs[0, 1]), fig.add_subplot(gs[1, 1]),
                       fig.add_subplot(gs[2, 1]))
 tau = np.arange(a.lags) * a.bin
@@ -175,8 +178,8 @@ axB.axhline(1, color='r', ls=':'); axB.set(ylabel='branching ratio br', title='b
 axB.tick_params(labelbottom=False)
 axI.plot(x, [r['integrated_MI_bits_ns'] for r in rows], 'o-', color='tab:orange')
 axI.set(ylabel='integrated MI  [bit ns]'); axI.tick_params(labelbottom=False)
-axK.plot(x, [r['m_causal'] for r in rows], 'o-', color='tab:green')
-axK.set(xlabel=xlab, ylabel='kick effect m_causal\n[partners fired]')
-axK.text(0.02, 0.05, 'single-node kick minus empty kick', transform=axK.transAxes, fontsize=8, color='0.3')
+axK.plot(x, [r.get('order_param', np.nan) for r in rows], 'o-', color='tab:green')
+axK.set(xlabel=xlab, ylabel='order parameter\n[fraction of time active]', ylim=(-0.03, 1.03))
+axK.text(0.02, 0.85, 'loop active 140-200 ns after a kick (self-sustained)', transform=axK.transAxes, fontsize=8, color='0.3')
 axI.sharex(axB); axK.sharex(axB)
 fig.savefig(f'{a.out}/loop_temporal_mi.png', dpi=150, bbox_inches='tight')
