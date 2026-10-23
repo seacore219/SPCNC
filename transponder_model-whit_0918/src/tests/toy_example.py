@@ -62,6 +62,7 @@ parser.add_argument('--sw_noise', type=float, default=0, help='std (uA) of U3 sw
 parser.add_argument('--seed', type=int, default=0, help='random seed for --rate and --sw_noise')
 parser.add_argument('--save_spikes', default=None, help='save output spike times to this .npz file')
 parser.add_argument('--no_plots', action='store_true', help='skip all plots (for sweeps)')
+parser.add_argument('--record_parents', action='store_true', help='record which incoming pulses caused each spike (saved as "parents" with --save_spikes)')
 parser.add_argument('--save_currents', action='store_true', help='also save t and the solver state (i_nw, i_loop per node) in the --save_spikes file')
 parser.add_argument('--pulse_period', type=float, default=0, help='if > 0, perturbation protocol: every pulse_period ns force a random number (0..len(kick_nodes)) of --kick_nodes to spike')
 parser.add_argument('--kick_nodes', type=int, nargs='+', default=[5, 6, 7], help='rows that the perturbation forces to spike (5,6,7 = t4,t5,t6)')
@@ -185,6 +186,8 @@ for i,arow in enumerate(connectivity.T):
 output_states = np.zeros(N_transponders) ## initializes the outputs to 0 since no firing yet
 #output_click_times = np.array([0 , 0, 0, 0 ,0]) ## could be array
 output_click_times = [[] for _ in range(len(input_states))] ## 
+output_parents  = [[] for _ in range(N_transponders)] # [new] per output spike: list of (sender, sender spike time) that caused it; [] = root
+pending_parents = [[] for _ in range(N_transponders)] # [new] causes of the latest input click, handed to the next output spike
 
 
 def RHS(t, x):
@@ -207,6 +210,7 @@ def RHS(t, x):
         # simple threshold model of ntron firing. 
         # OUTPUT Clicks
         output_click_times[n].append(t)#sensor_click_t) # or t?
+        if args.record_parents: output_parents[n].append([]) # [new] sensor click or forced kick: a root, no parent
         sensor_pulses[n].pop(i_click)
 
   # Update the output currents for each transponder
@@ -230,6 +234,8 @@ def RHS(t, x):
         print("output {}: click_t = {}".format(i_out, t))
         output_states[i_out] = 1
         output_click_times[i_out].append(t)
+        if args.record_parents: # [new] this output spike inherits the causes of the input click that led to it
+          output_parents[i_out].append(pending_parents[i_out]); pending_parents[i_out] = []
 
   # update the input currents
   # input
@@ -239,6 +245,7 @@ def RHS(t, x):
       # get all the input pulses
       ntron_gate_current = 0
       transponder_input_gate_current[i_in] = 0
+      pulses = [] # [new] (sender, sender spike time, current it adds right now), only filled with --record_parents
       for j_in in input_connections[i_in]:
         n_split = np.sum(connectivity[j_in])
         b2  = transponder_bias2[j_in]
@@ -247,7 +254,9 @@ def RHS(t, x):
         for click_t in output_click_times[j_in][-20:]: # [new] [-20:]: older spikes are >57 ns old and their pulse is ~e^-57 (speed-up for long runs)
           click_delay         = input_delays[i_in][j_in]
           click_arrival       = click_t  + click_delay
-          ntron_gate_current += amp*OutputPulse(t, t0=click_arrival)
+          c = amp*OutputPulse(t, t0=click_arrival) # [new] keep this pulse's share (same value as before)
+          ntron_gate_current += c
+          if args.record_parents and c > 0.01*amp: pulses.append((j_in, click_t, c)) # [new] pulses still present at the gate
           #print(f"input sum {i_in}: click_t = {click_t}, delay[{j_in}] = {click_delay}  ntron gate {ntron_gate_current}")
       # now for the internals of the transponder 
       transponder_source_current[i_in]     = nw_currents[i_in] + ntron_gate_current
@@ -256,6 +265,10 @@ def RHS(t, x):
         # INPUT Clicks
         input_states[i_in] = 1
         input_click_times[i_in].append(t)
+        if args.record_parents: # [new] necessary parents: pulses without which the sum would not have crossed the threshold
+          excess = nw_currents[i_in] + ntron_gate_current - (Inw1_sw + sw_offset[i_in])
+          need = [(j, tc) for j, tc, c in pulses if c >= excess]
+          pending_parents[i_in] = need if need else [(j, tc) for j, tc, c in pulses] # none necessary -> all present share it
         #print("node {:d}: click_t = {}".format(i_in,t))
       # add staying dead for recovery time
     if input_states[i_in] == 1:
@@ -312,6 +325,7 @@ def main() -> int:
   solution = solve_ivp(RHS, (0, args.tmax * 1.0e-9), transponder_initial_state, t_eval= t_pts, max_step = args.max_step*1.0e-9) # [new] tmax, max_step flags
   if args.save_spikes: # [new] spike times (s) for the MI sweep; object array because nodes have different spike counts
     np.savez(args.save_spikes, spikes=np.array([np.array(c) for c in output_click_times], dtype=object), tmax=args.tmax, delay=delay, pulse_times=pulse_times, pulse_sizes=pulse_sizes,
+             **(dict(parents=np.array(output_parents + [None], dtype=object)[:-1]) if args.record_parents else {}), # [new]
              **(dict(t=solution.t, y=solution.y) if args.save_currents else {}))
   if args.no_plots:
     return 0

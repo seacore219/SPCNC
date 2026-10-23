@@ -64,7 +64,7 @@ def simulate(job):  # one long run; cached, so an interrupted sweep resumes
         nodes = [x for n in a.silence for x in ('--ib1', str(n), '0')]
         nodes += [x for k, n in enumerate(a.loop) for x in ('--ib1', str(n), f'{B[s, k]:.3f}', '--ib2', str(n), f'{B[s, 3 + k]:.3f}')]
         cmd = [sys.executable, 'toy_example.py', *a.fixed.split(), *nodes, '--kick_nodes', *map(str, a.loop),
-               '--sw_noise', f'{B[s, 6]:.3f}', *(['--split', str(a.splits[s])] if a.splits else []), '--pulse_period', str(a.period), '--tmax', str(a.tmax), '--seed', str(seed), '--save_spikes', f, '--no_plots']
+               '--sw_noise', f'{B[s, 6]:.3f}', *(['--split', str(a.splits[s])] if a.splits else []), '--pulse_period', str(a.period), '--tmax', str(a.tmax), '--seed', str(seed), '--save_spikes', f, '--no_plots', '--record_parents']
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
     return f
 
@@ -86,7 +86,26 @@ def load(f):  # kick sizes, loop activity before / after each kick, in-loop desc
     pt, ps = d['pulse_times'] * 1e9, d['pulse_sizes']
     one = [hits(j, t) for t, k in zip(pt, ps) if k == 1 for j in a.loop if np.any(np.abs(sp[j] - t) < 0.05)]
     none = [hits(j, t) for t, k in zip(pt, ps) if k == 0 for j in a.loop]
-    return d['pulse_sizes'][ok], after, pre, kids, one, none
+    # exact genealogy (runs made with --record_parents): each child counts 1, shared equally among its parents
+    credit, gen, sizes = [], [], []
+    if 'parents' in d:
+        spikes = sorted((t, n, k) for n in a.loop for k, t in enumerate(sp[n]))  # time order: parents come first
+        pos = {(n, k): i for i, (t, n, k) in enumerate(spikes)}
+        cr, g, root = np.zeros(len(spikes)), np.zeros(len(spikes), int), list(range(len(spikes)))
+        def find(i):  # avalanche label (union-find, iterative so long cascades are fine)
+            while root[i] != i:
+                root[i] = root[root[i]]; i = root[i]
+            return i
+        for i, (t, n, k) in enumerate(spikes):
+            ps = [pos[j, int(np.argmin(np.abs(sp[j] - tc * 1e9)))] for j, tc in d['parents'][n][k] if j in a.loop]
+            for q in ps:
+                cr[q] += 1 / len(ps)  # 1 / number of parents, whatever that number is
+                root[find(q)] = find(i)  # child and parents belong to the same avalanche
+            g[i] = 1 + max(g[q] for q in ps) if ps else 0
+        credit, gen = cr.tolist(), g.tolist()
+        sizes = np.bincount([find(i) for i in range(len(spikes))]).tolist() if spikes else []
+        sizes = [x for x in sizes if x > 0]
+    return d['pulse_sizes'][ok], after, pre, kids, one, none, credit, gen, sizes
 
 
 def curve(est, S, R, C=None):  # estimate and surrogate-95% at every lag
@@ -111,6 +130,7 @@ for s in range(a.samples):
     S, A, P = (np.concatenate([q[i] for q in parts]) for i in range(3))
     kids = sum((q[3] for q in parts), [])
     one, none = sum((q[4] for q in parts), []), sum((q[5] for q in parts), [])
+    credit, gen, sizes = (np.array(sum((q[i] for q in parts), [])) for i in (6, 7, 8))
     I, I95 = curve(mi, S, A)
     C, C95 = curve(cmi, S, A, P)
     sig = C > C95
@@ -119,6 +139,9 @@ for s in range(a.samples):
     late = A[:, -10:].sum(1) > 0  # loop still active 30 ns before the next kick
     row = dict(sample=s, split=a.splits[s] if a.splits else None, ib1=B[s, :3].round(3).tolist(), ib2=B[s, 3:6].round(3).tolist(), sw_noise=round(float(B[s, 6]), 3), kicks=int(len(S)),
                m_loop=float(np.mean(kids)) if kids else float('nan'),
+               m_exact=float(credit.mean()) if credit.size else float('nan'),  # children per spike from the recorded causes
+               m_by_generation=[float(credit[gen == k].mean()) for k in range(6) if (gen == k).any()],
+               avalanche_mean=float(sizes.mean()) if sizes.size else float('nan'), avalanche_max=int(sizes.max()) if sizes.size else 0,
                m_causal=float(np.mean(one) - np.mean(none)) if one and none else float('nan'), single_kicks=len(one),
                ongoing_per_bin=float(P.mean() / 3),  # loop activity just before kicks (spontaneous + leftover)
                evoked_dX3_first5=float(A[S == 3, :5].mean()) if (S == 3).any() else float('nan'),
