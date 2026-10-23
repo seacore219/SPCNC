@@ -155,29 +155,24 @@ for s in range(a.samples):
     print({k: (round(v, 3) if isinstance(v, float) else v) for k, v in row.items() if 'tau' not in k}, flush=True)
 json.dump(rows, open(f'{a.out}/summary_loop.json', 'w'), indent=1)
 
-# figure: left = MI vs lag after the kick (one curve per setting); right = br and MI vs split, sharing the x axis
+# figure: left = MI vs lag after the kick (significant lags, one colour per setting); right = br and MI vs split, shared x axis
 x = np.array([r['split'] for r in rows]) if a.splits else np.arange(len(rows))
 xlab = 'split' if a.splits else 'sample'
 fig = plt.figure(figsize=(14, 6.5))
 gs = fig.add_gridspec(2, 2, width_ratios=[1.3, 1], hspace=0.08, wspace=0.25)
 axT, axB, axI = fig.add_subplot(gs[:, 0]), fig.add_subplot(gs[0, 1]), fig.add_subplot(gs[1, 1])
 tau = np.arange(a.lags) * a.bin
-colors = plt.cm.viridis(np.linspace(0, 0.9, len(rows)))
-for r, c in zip(rows, colors):
-    v = np.array(r['MI_tau']); v[np.array(r['MI95_tau']) >= v] = np.nan  # significant lags only
-    axT.plot(tau[1:], v[1:], 'o-', ms=3, lw=1, color=c, label=f"{xlab} {r['split'] if a.splits else r['sample']}")
+cmap, norm = plt.cm.viridis, plt.Normalize(x.min(), x.max() if x.max() > x.min() else x.min() + 1)
+for r, xv in zip(rows, x):
+    v = np.array(r['MI_tau']); keep = (v > np.array(r['MI95_tau'])) & (tau > 0)  # significant lags only, lag 0 left out
+    axT.scatter(tau[keep], v[keep], s=14, color=cmap(norm(xv)))
 axT.set(yscale='log', xlabel='ns after the kick', ylabel='I(kick size ; loop spikes at that lag)  [bits]',
         title='mutual information vs time after the kick (significant lags only)')
-axT.legend(fontsize=8, ncol=2)
-axB.plot(x, [r['m_exact'] for r in rows], 'o-', color='k', label='br (exact, from recorded causes)')
-axB.plot(x, [r['m_loop'] for r in rows], 's--', color='0.6', ms=4, label='br (timing window, for comparison)')
+fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), ax=axT, label=xlab)
+axB.plot(x, [r['m_exact'] for r in rows], 'o-', color='k')
 axB.axhline(1, color='r', ls=':'); axB.set(ylabel='branching ratio br', title='branching ratio and mutual information vs ' + xlab)
-axB.legend(fontsize=8); axB.tick_params(labelbottom=False)
+axB.tick_params(labelbottom=False)
 axI.plot(x, [r['integrated_MI_bits_ns'] for r in rows], 'o-', color='tab:orange')
 axI.set(xlabel=xlab, ylabel='integrated MI  [bit ns]')
-ax2 = axI.twinx(); ax2.plot(x, [r['memory_MI_ns'] for r in rows], 's--', color='tab:blue', ms=4)
-ax2.set_ylabel('memory: last significant lag  [ns]', color='tab:blue')
-axI.legend(handles=[plt.Line2D([], [], color='tab:orange', marker='o', label='integrated MI'),
-                    plt.Line2D([], [], color='tab:blue', marker='s', ls='--', label='memory')], fontsize=8, loc='upper left')
 axI.sharex(axB)
 fig.savefig(f'{a.out}/loop_temporal_mi.png', dpi=150, bbox_inches='tight')
