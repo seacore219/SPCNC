@@ -19,7 +19,6 @@ import argparse, json, math, os, subprocess, sys
 from multiprocessing import get_context  # "fork": macOS defaults to "spawn", which re-runs this script in every worker
 import numpy as np
 np.math = math  # IDTxl still calls np.math, which numpy 2 removed
-from idtxl.estimators_jidt import JidtDiscreteMI, JidtDiscreteCMI
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -123,6 +122,7 @@ with get_context("fork").Pool(a.workers) as pool:  # all runs in parallel; analy
     for _ in pool.imap_unordered(simulate, jobs):
         pass
 
+from idtxl.estimators_jidt import JidtDiscreteMI, JidtDiscreteCMI  # loaded only now, so simulations never depend on IDTxl
 mi = JidtDiscreteMI({'discretise_method': 'none', 'alph1': 4, 'alph2': 4})
 cmi = JidtDiscreteCMI({'discretise_method': 'none', 'alph1': 4, 'alph2': 4, 'alphc': 4})
 rows = []
