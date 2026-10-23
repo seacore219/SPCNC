@@ -133,15 +133,26 @@ for s in range(a.samples):
     one, none = sum((q[4] for q in parts), []), sum((q[5] for q in parts), [])
     credit, gen, sizes = (np.array(sum((q[i] for q in parts), [])) for i in (6, 7, 8))
     order = float(np.mean(sum((q[9] for q in parts), [])))
+    sem = lambda v: float(np.std(v, ddof=1) / np.sqrt(len(v))) if len(v) > 1 else float('nan')  # standard error across runs
+    br_runs = [np.mean(q[6]) for q in parts if len(q[6])]
+    order_runs = [np.mean(q[9]) for q in parts if len(q[9])]
     I, I95 = curve(mi, S, A)
     C, C95 = curve(cmi, S, A, P)
     sig = C > C95
     sig[0] = False  # lag 0 only contains the forced kick spikes themselves
     sigI = I > I95; sigI[0] = False  # plain MI: lower chance threshold; best readout when ongoing activity is low
+    # jackknife error bar for integrated MI: recompute it leaving out one run at a time
+    jk = []
+    for r in range(len(parts)) if len(parts) > 1 else []:
+        keep = [q for i, q in enumerate(parts) if i != r]
+        Sj, Aj = np.concatenate([q[0] for q in keep]), np.concatenate([q[1] for q in keep])
+        Ij, Ij95 = curve(mi, Sj, Aj); sj = Ij > Ij95; sj[0] = False
+        jk.append(np.sum(np.where(sj, Ij, 0)) * a.bin)
+    n = len(jk); mi_se = float(np.sqrt((n - 1) / n * np.sum((np.array(jk) - np.mean(jk)) ** 2))) if n > 1 else float('nan')
     late = A[:, -10:].sum(1) > 0  # loop still active 30 ns before the next kick
     row = dict(sample=s, split=a.splits[s] if a.splits else None, ib1=B[s, :3].round(3).tolist(), ib2=B[s, 3:6].round(3).tolist(), sw_noise=round(float(B[s, 6]), 3), kicks=int(len(S)),
                m_loop=float(np.mean(kids)) if kids else float('nan'),
-               order_param=order,  # fraction of 3 ns bins with a loop spike, 140-200 ns after the previous kick
+               order_param=order, order_param_se=sem(order_runs), m_exact_se=sem(br_runs),  # fraction of 3 ns bins with a loop spike, 140-200 ns after the previous kick
                m_exact=float(credit.mean()) if credit.size else float('nan'),  # children per spike from the recorded causes
                m_by_generation=[float(credit[gen == k].mean()) for k in range(6) if (gen == k).any()],
                avalanche_mean=float(sizes.mean()) if sizes.size else float('nan'), avalanche_max=int(sizes.max()) if sizes.size else 0,
@@ -152,7 +163,7 @@ for s in range(a.samples):
                memory_ns=float((np.nonzero(sig)[0].max() + 1) * a.bin if sig.any() else 0),
                integrated_CMI_bits_ns=float(np.sum(np.where(sig, C, 0)) * a.bin),
                memory_MI_ns=float(np.nonzero(sigI)[0].max() * a.bin if sigI.any() else 0),  # lag (start of bin) of last significant MI
-               integrated_MI_bits_ns=float(np.sum(np.where(sigI, I, 0)) * a.bin),
+               integrated_MI_bits_ns=float(np.sum(np.where(sigI, I, 0)) * a.bin), integrated_MI_se=mi_se,
                MI_tau=I.tolist(), MI95_tau=I95.tolist(), CMI_tau=C.tolist(), CMI95_tau=C95.tolist())
     rows.append(row)
     print({k: (round(v, 3) if isinstance(v, float) else v) for k, v in row.items() if 'tau' not in k}, flush=True)
@@ -173,13 +184,19 @@ for r, xv in zip(rows, x):
 axT.set(yscale='log', xlabel='ns after the kick', ylabel='I(kick size ; loop spikes at that lag)  [bits]',
         title='mutual information vs time after the kick (significant lags only)')
 fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), ax=axT, label=xlab)
-axB.plot(x, [r['m_exact'] for r in rows], 'o-', color='k')
+eb = lambda ax, key, c: ax.errorbar(x, [r.get(key, np.nan) for r in rows], yerr=[r.get(key + '_se', np.nan) for r in rows] if key != 'm_exact' else [r.get('m_exact_se', np.nan) for r in rows], fmt='o-', color=c, capsize=3)
+eb(axB, 'm_exact', 'k')
 axB.axhline(1, color='r', ls=':'); axB.set(ylabel='branching ratio br', title='branching ratio and mutual information vs ' + xlab)
 axB.tick_params(labelbottom=False)
-axI.plot(x, [r['integrated_MI_bits_ns'] for r in rows], 'o-', color='tab:orange')
+axI.errorbar(x, [r['integrated_MI_bits_ns'] for r in rows], yerr=[r.get('integrated_MI_se', np.nan) for r in rows], fmt='o-', color='tab:orange', capsize=3)
 axI.set(ylabel='integrated MI  [bit ns]'); axI.tick_params(labelbottom=False)
-axK.plot(x, [r.get('order_param', np.nan) for r in rows], 'o-', color='tab:green')
+axK.errorbar(x, [r.get('order_param', np.nan) for r in rows], yerr=[r.get('order_param_se', np.nan) for r in rows], fmt='o-', color='tab:green', capsize=3)
 axK.set(xlabel=xlab, ylabel='order parameter\n[fraction of time active]', ylim=(-0.03, 1.03))
 axK.text(0.02, 0.85, 'loop active 140-200 ns after a kick (self-sustained)', transform=axK.transAxes, fontsize=8, color='0.3')
 axI.sharex(axB); axK.sharex(axB)
+from matplotlib.ticker import AutoMinorLocator
+for ax_ in (axT, axB, axI, axK):
+    ax_.xaxis.set_minor_locator(AutoMinorLocator()); ax_.tick_params(which='minor', length=3)
+for ax_ in (axB, axI, axK):
+    ax_.yaxis.set_minor_locator(AutoMinorLocator())
 fig.savefig(f'{a.out}/loop_temporal_mi.png', dpi=150, bbox_inches='tight')
