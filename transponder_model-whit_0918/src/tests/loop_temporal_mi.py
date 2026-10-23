@@ -158,9 +158,10 @@ json.dump(rows, open(f'{a.out}/summary_loop.json', 'w'), indent=1)
 # figure: left = MI vs lag after the kick (significant lags, one colour per setting); right = br and MI vs split, shared x axis
 x = np.array([r['split'] for r in rows]) if a.splits else np.arange(len(rows))
 xlab = 'split' if a.splits else 'sample'
-fig = plt.figure(figsize=(14, 6.5))
-gs = fig.add_gridspec(2, 2, width_ratios=[1.3, 1], hspace=0.08, wspace=0.25)
-axT, axB, axI = fig.add_subplot(gs[:, 0]), fig.add_subplot(gs[0, 1]), fig.add_subplot(gs[1, 1])
+fig = plt.figure(figsize=(14, 8.5))
+gs = fig.add_gridspec(3, 2, width_ratios=[1.3, 1], hspace=0.1, wspace=0.25)
+axT, axB, axI, axK = (fig.add_subplot(gs[:, 0]), fig.add_subplot(gs[0, 1]), fig.add_subplot(gs[1, 1]),
+                      fig.add_subplot(gs[2, 1]))
 tau = np.arange(a.lags) * a.bin
 cmap, norm = plt.cm.viridis, plt.Normalize(x.min(), x.max() if x.max() > x.min() else x.min() + 1)
 for r, xv in zip(rows, x):
@@ -173,6 +174,9 @@ axB.plot(x, [r['m_exact'] for r in rows], 'o-', color='k')
 axB.axhline(1, color='r', ls=':'); axB.set(ylabel='branching ratio br', title='branching ratio and mutual information vs ' + xlab)
 axB.tick_params(labelbottom=False)
 axI.plot(x, [r['integrated_MI_bits_ns'] for r in rows], 'o-', color='tab:orange')
-axI.set(xlabel=xlab, ylabel='integrated MI  [bit ns]')
-axI.sharex(axB)
+axI.set(ylabel='integrated MI  [bit ns]'); axI.tick_params(labelbottom=False)
+axK.plot(x, [r['m_causal'] for r in rows], 'o-', color='tab:green')
+axK.set(xlabel=xlab, ylabel='kick effect m_causal\n[partners fired]')
+axK.text(0.02, 0.05, 'single-node kick minus empty kick', transform=axK.transAxes, fontsize=8, color='0.3')
+axI.sharex(axB); axK.sharex(axB)
 fig.savefig(f'{a.out}/loop_temporal_mi.png', dpi=150, bbox_inches='tight')
