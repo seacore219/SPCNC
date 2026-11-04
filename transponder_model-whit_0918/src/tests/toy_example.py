@@ -63,7 +63,7 @@ parser.add_argument('--seed', type=int, default=0, help='random seed for --rate 
 parser.add_argument('--save_spikes', default=None, help='save output spike times to this .npz file')
 parser.add_argument('--no_plots', action='store_true', help='skip all plots (for sweeps)')
 parser.add_argument('--record_parents', action='store_true', help='record which incoming pulses caused each spike (saved as "parents" with --save_spikes)')
-parser.add_argument('--save_currents', action='store_true', help='also save t and the solver state (i_nw, i_loop per node) in the --save_spikes file')
+parser.add_argument('--save_currents', action='store_true', help='also save t, the solver state (i_nw, i_loop per node), every node\'s gate current and the input-click times in the --save_spikes file')
 parser.add_argument('--pulse_period', type=float, default=0, help='if > 0, perturbation protocol: every pulse_period ns force a random number (0..len(kick_nodes)) of --kick_nodes to spike')
 parser.add_argument('--kick_nodes', type=int, nargs='+', default=[5, 6, 7], help='rows that the perturbation forces to spike (5,6,7 = t4,t5,t6)')
 parser.add_argument('--noise_dt', type=float, default=0, help='if > 0, redraw every node\'s switching-noise offset every noise_dt ns (ongoing noise -> spontaneous firing)')
@@ -300,6 +300,17 @@ def RHS(t, x):
 
 
 
+def gate_trace(tt): # [new] gate current of every node at times tt, rebuilt with RHS step 3's own formula (amp*OutputPulse per upstream spike)
+  g = np.zeros((N_transponders, len(tt)))
+  for i_in in range(N_transponders):
+    for j_in in input_connections[i_in]:
+      amp = transponder_bias2[j_in]*transponder_current_divider/np.sum(connectivity[j_in])
+      for click_t in output_click_times[j_in]:
+        arrival = click_t + input_delays[i_in][j_in]
+        w = (tt >= click_t) & (tt <= arrival + 60.0e-9) # RHS adds a pulse once the spike exists; after 60 ns it is ~e^-60
+        g[i_in, w] += [amp*OutputPulse(tk, t0=arrival) for tk in tt[w]]
+  return g
+
 def main() -> int:
   """ Prototype network simulation"""
   print(delay)
@@ -326,7 +337,8 @@ def main() -> int:
   if args.save_spikes: # [new] spike times (s) for the MI sweep; object array because nodes have different spike counts
     np.savez(args.save_spikes, spikes=np.array([np.array(c) for c in output_click_times], dtype=object), tmax=args.tmax, delay=delay, pulse_times=pulse_times, pulse_sizes=pulse_sizes,
              **(dict(parents=np.array(output_parents + [None], dtype=object)[:-1]) if args.record_parents else {}), # [new]
-             **(dict(t=solution.t, y=solution.y) if args.save_currents else {}))
+             **(dict(t=solution.t, y=solution.y, gate=gate_trace(solution.t), # [new] y rows: 2n = i_nw, 2n+1 = i_loop of node n
+                     input_clicks=np.array([np.array(c) for c in input_click_times] + [None], dtype=object)[:-1]) if args.save_currents else {}))
   if args.no_plots:
     return 0
 
